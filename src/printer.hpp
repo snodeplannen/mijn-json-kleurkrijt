@@ -55,7 +55,10 @@ private:
             else escaped << c;
         }
         
-        addColored(style.string_color, "\"" + escaped.str() + "\"");
+        // Print quotes apart van de string content
+        addColored(style.string_quote_color, "\"");
+        addColored(style.string_color, escaped.str());
+        addColored(style.string_quote_color, "\"");
     }
     
     void printKey(const std::string& s, const std::string& path = "") {
@@ -78,6 +81,7 @@ private:
         
         // Check voor individuele key kleur
         Color key_col = style.key_color;
+        Color quote_col = style.key_quote_color;
         if (!style.key_colors.empty()) {
             // Check exacte key match
             auto it = style.key_colors.find(s);
@@ -92,7 +96,10 @@ private:
             }
         }
         
-        addColored(key_col, "\"" + escaped.str() + "\"");
+        // Print quotes apart van de key content
+        addColored(quote_col, "\"");
+        addColored(key_col, escaped.str());
+        addColored(quote_col, "\"");
     }
     
     void printDict(py::dict obj, const std::string& parent_path = "") {
@@ -193,7 +200,10 @@ private:
                     }
                     else escaped << c;
                 }
-                addColored(value_color, "\"" + escaped.str() + "\"");
+                // Print quotes apart voor custom colors
+                addColored(style.string_quote_color, "\"");
+                addColored(value_color, escaped.str());
+                addColored(style.string_quote_color, "\"");
             } else {
                 printString(py::str(obj));
             }

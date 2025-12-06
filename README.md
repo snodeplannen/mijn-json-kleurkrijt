@@ -111,6 +111,8 @@ Stijl configuratie voor kleuring en formatting.
 - `bracket_color`: Color voor brackets `[]`
 - `colon_color`: Color voor dubbele punten `:`
 - `comma_color`: Color voor komma's `,`
+- `key_quote_color`: Color voor aanhalingstekens rond keys (standaard: zelfde als key_color)
+- `string_quote_color`: Color voor aanhalingstekens rond strings (standaard: zelfde als string_color)
 - `color_mode`: ColorMode (AUTO, ANSI16, ANSI256, TRUECOLOR, DISABLED)
 - `compact`: Boolean voor compact mode (geen indentatie)
 - `indent_size`: Aantal spaties per indent niveau
@@ -237,6 +239,34 @@ colored_json.print(data, style)
 - Eenvoudige keys: `"user"`, `"name"`, `"status"`
 - Geneste keys: `"user.name"`, `"user.age"`
 - Array items: `"products[0].name"`, `"products[1].price"`
+
+### Quote kleuren styling
+
+```python
+import colored_json
+
+data = {"name": "Alice", "status": "active"}
+
+style = colored_json.Style.get_preset("default")
+
+# Custom quote kleuren
+style.key_quote_color = colored_json.Color(255, 255, 0)  # Geel voor key quotes
+style.string_quote_color = colored_json.Color(0, 255, 255)  # Cyaan voor string quotes
+
+# Of subtiele grijs quotes
+style.key_quote_color = colored_json.Color(128, 128, 128)
+style.string_quote_color = colored_json.Color(128, 128, 128)
+
+colored_json.print(data, style)
+```
+
+**Preset quote kleuren:**
+- **default/dracula**: Quotes hebben dezelfde kleur als content
+- **solarized**: Subtiele grijze quotes voor betere leesbaarheid
+- **monokai**: Witte quotes voor contrast
+- **github**: Donkere quotes
+- **minimal**: Subtiele grijze quotes
+- **neon**: Witte quotes voor contrast
 
 ### Performance benchmark
 

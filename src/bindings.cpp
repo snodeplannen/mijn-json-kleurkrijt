@@ -50,6 +50,8 @@ PYBIND11_MODULE(colored_json, m) {
         .def_readwrite("bracket_color", &colored_json::Style::bracket_color)
         .def_readwrite("colon_color", &colored_json::Style::colon_color)
         .def_readwrite("comma_color", &colored_json::Style::comma_color)
+        .def_readwrite("key_quote_color", &colored_json::Style::key_quote_color)
+        .def_readwrite("string_quote_color", &colored_json::Style::string_quote_color)
         .def_property("key_colors",
             [](colored_json::Style& s) -> colored_json::KeyColorsMap& { return s.key_colors; },
             [](colored_json::Style& s, const colored_json::KeyColorsMap& v) { s.key_colors = v; })

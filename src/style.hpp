@@ -34,6 +34,8 @@ struct Style {
     Color bracket_color{255, 255, 255}; // Wit
     Color colon_color{255, 255, 255};   // Wit
     Color comma_color{255, 255, 255};   // Wit
+    Color key_quote_color{255, 255, 255};   // Kleur voor aanhalingstekens rond keys (standaard: zelfde als key)
+    Color string_quote_color{255, 255, 255}; // Kleur voor aanhalingstekens rond strings (standaard: zelfde als string)
     
     // Individuele kleuren per key
     KeyColorsMap key_colors;
@@ -66,6 +68,8 @@ inline Style Style::getPreset(const std::string& name) {
         s.number_color = Color{255, 203, 107};
         s.bool_color = Color{255, 121, 198};
         s.null_color = Color{137, 137, 137};
+        s.key_quote_color = Color{93, 173, 226};  // Zelfde als key
+        s.string_quote_color = Color{152, 224, 36}; // Zelfde als string
         
     } else if (name == "solarized") {
         s.key_color = Color{38, 139, 210};
@@ -74,6 +78,8 @@ inline Style Style::getPreset(const std::string& name) {
         s.bool_color = Color{211, 54, 130};
         s.null_color = Color{131, 148, 150};
         s.brace_color = Color{88, 110, 117};
+        s.key_quote_color = Color{88, 110, 117};  // Subtieler grijs
+        s.string_quote_color = Color{88, 110, 117};
         
     } else if (name == "monokai") {
         s.key_color = Color{156, 220, 254};
@@ -82,6 +88,8 @@ inline Style Style::getPreset(const std::string& name) {
         s.bool_color = Color{190, 132, 255};
         s.null_color = Color{156, 156, 156};
         s.brace_color = Color{248, 248, 242};
+        s.key_quote_color = Color{248, 248, 242};  // Wit/grijs
+        s.string_quote_color = Color{248, 248, 242};
         
     } else if (name == "github") {
         s.key_color = Color{3, 47, 98};
@@ -90,6 +98,8 @@ inline Style Style::getPreset(const std::string& name) {
         s.bool_color = Color{0, 16, 128};
         s.null_color = Color{128, 128, 128};
         s.brace_color = Color{36, 41, 46};
+        s.key_quote_color = Color{36, 41, 46};  // Donkergrijs
+        s.string_quote_color = Color{36, 41, 46};
         
     } else if (name == "minimal") {
         s.key_color = Color::fromRgb(200, 200, 200);
@@ -99,6 +109,8 @@ inline Style Style::getPreset(const std::string& name) {
         s.null_color = Color::fromRgb(100, 100, 100);
         s.brace_color = Color::fromRgb(150, 150, 150);
         s.bracket_color = Color::fromRgb(150, 150, 150);
+        s.key_quote_color = Color::fromRgb(150, 150, 150);  // Subtieler
+        s.string_quote_color = Color::fromRgb(150, 150, 150);
         
     } else if (name == "neon") {
         s.key_color = Color{255, 0, 255};
@@ -107,6 +119,8 @@ inline Style Style::getPreset(const std::string& name) {
         s.bool_color = Color{255, 100, 255};
         s.null_color = Color{150, 150, 150};
         s.brace_color = Color{255, 255, 255};
+        s.key_quote_color = Color{255, 255, 255};  // Wit voor contrast
+        s.string_quote_color = Color{255, 255, 255};
         s.key_color.bold = true;
         s.string_color.bold = true;
         
