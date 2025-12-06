@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0", "pybind11>=2.10.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "colored_json"
+version = "1.0.0"
+description = "Razendsnelle gekleurde JSON/dict printer"
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [
+    {name = "Jouw Naam"}
+]
+dependencies = [
+    "pybind11>=2.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black",
+    "flake8",
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools.package-data]
+"*" = ["*.hpp", "*.cpp"]
+
