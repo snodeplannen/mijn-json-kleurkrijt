@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include "printer.hpp"
 #include "html_printer.hpp"
+#include "markdown_printer.hpp"
 #include "style.hpp"
 
 namespace py = pybind11;
@@ -112,6 +113,45 @@ PYBIND11_MODULE(colored_json, m) {
         py::arg("background_color") = "#1e1e1e",
         py::arg("font_family") = "Consolas, 'Courier New', monospace",
         "Genereer HTML output van gekleurde JSON");
+    
+    // Markdown export
+    py::class_<colored_json::MarkdownPrinter>(m, "MarkdownPrinter")
+        .def(py::init<const colored_json::Style&>())
+        .def("print", &colored_json::MarkdownPrinter::print,
+             py::arg("obj"),
+             py::arg("title") = "Colored JSON",
+             py::arg("language") = "json",
+             "Genereer Markdown output met code block")
+        .def("print_html", &colored_json::MarkdownPrinter::printHtml,
+             py::arg("obj"),
+             py::arg("title") = "Colored JSON",
+             py::arg("background_color") = "#1e1e1e",
+             py::arg("font_family") = "Consolas, 'Courier New', monospace",
+             "Genereer Markdown met HTML code block voor kleuren");
+    
+    m.def("to_markdown", [](py::handle obj, const colored_json::Style& style,
+                           const std::string& title,
+                           const std::string& language) {
+        colored_json::MarkdownPrinter printer(style);
+        return printer.print(obj, title, language);
+    }, py::arg("obj"),
+        py::arg("style") = colored_json::Style{},
+        py::arg("title") = "Colored JSON",
+        py::arg("language") = "json",
+        "Genereer Markdown output met code block");
+    
+    m.def("to_markdown_html", [](py::handle obj, const colored_json::Style& style,
+                                 const std::string& title,
+                                 const std::string& background_color,
+                                 const std::string& font_family) {
+        colored_json::MarkdownPrinter printer(style);
+        return printer.printHtml(obj, title, background_color, font_family);
+    }, py::arg("obj"),
+        py::arg("style") = colored_json::Style{},
+        py::arg("title") = "Colored JSON",
+        py::arg("background_color") = "#1e1e1e",
+        py::arg("font_family") = "Consolas, 'Courier New', monospace",
+        "Genereer Markdown met HTML code block voor gekleurde JSON");
     
     // Expose builtin colors
     py::module_ colors = m.def_submodule("colors", "Ingebouwde kleuren");

@@ -68,8 +68,9 @@ ENV/
 .coverage
 htmlcov/
 
-# HTML output
+# HTML/Markdown output
 html_output/
+markdown_output/
 *.html
 
 # mypy

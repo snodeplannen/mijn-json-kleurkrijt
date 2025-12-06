@@ -14,6 +14,7 @@ Een razendsnelle C++ module met pybind11 voor gekleurde weergave van Python dict
 - **Custom styling**: Volledig aanpasbare kleuren en stijlen
 - **TTY support**: Detecteert automatisch of terminal kleuren ondersteunt
 - **HTML export**: Genereer complete HTML pagina's met gekleurde JSON
+- **Markdown export**: Genereer Markdown met gekleurde JSON (HTML code blocks)
 
 ## Installatie
 
@@ -81,6 +82,11 @@ print(formatted)
 html = colored_json.to_html(data, style, title="My JSON", background_color="#1e1e1e")
 with open("output.html", "w", encoding="utf-8") as f:
     f.write(html)
+
+# Markdown export (met HTML voor kleuren)
+markdown = colored_json.to_markdown_html(data, style, title="My JSON", background_color="#1e1e1e")
+with open("output.md", "w", encoding="utf-8") as f:
+    f.write(markdown)
 ```
 
 ## API Referentie
@@ -121,6 +127,38 @@ Genereert een complete HTML pagina met gekleurde JSON.
 html = colored_json.to_html(data, style, title="My JSON", background_color="#282a36")
 with open("output.html", "w", encoding="utf-8") as f:
     f.write(html)
+```
+
+### `colored_json.to_markdown(obj, style=None, title="Colored JSON", language="json")`
+
+Genereert Markdown met een code block (zonder kleuren, standaard Markdown).
+
+**Parameters:**
+- `obj`: Python dict, list, of ander object om te formatteren
+- `style`: Optionele Style object (standaard: Style())
+- `title`: Titel voor de Markdown sectie
+- `language`: Code block language identifier (standaard: "json")
+
+**Returns:** Markdown string met code block
+
+### `colored_json.to_markdown_html(obj, style=None, title="Colored JSON", background_color="#1e1e1e", font_family="Consolas, 'Courier New', monospace")`
+
+Genereert Markdown met HTML code block voor gekleurde JSON (werkt in Markdown renderers die HTML ondersteunen).
+
+**Parameters:**
+- `obj`: Python dict, list, of ander object om te formatteren
+- `style`: Optionele Style object (standaard: Style())
+- `title`: Titel voor de Markdown sectie
+- `background_color`: Achtergrondkleur (CSS kleur string)
+- `font_family`: Font familie voor de JSON weergave
+
+**Returns:** Markdown string met HTML code block
+
+**Voorbeeld:**
+```python
+markdown = colored_json.to_markdown_html(data, style, title="My JSON", background_color="#282a36")
+with open("output.md", "w", encoding="utf-8") as f:
+    f.write(markdown)
 ```
 
 ### `Style` Class
@@ -313,6 +351,32 @@ with open("output.html", "w", encoding="utf-8") as f:
 # Met custom styling
 style.set_key_color("user", colored_json.Color(255, 0, 0))
 html = colored_json.to_html(data, style, background_color="#1e1e1e")
+```
+
+### Markdown export
+
+```python
+import colored_json
+
+data = {
+    "user": {"name": "Alice", "age": 30},
+    "status": "active"
+}
+
+# Markdown met code block (zonder kleuren)
+style = colored_json.Style.get_preset("default")
+markdown = colored_json.to_markdown(data, style, title="Example JSON")
+with open("output.md", "w", encoding="utf-8") as f:
+    f.write(markdown)
+
+# Markdown met HTML code block (gekleurd, werkt in GitHub, GitLab, etc.)
+markdown = colored_json.to_markdown_html(
+    data, style, 
+    title="Colored JSON Example",
+    background_color="#282a36"
+)
+with open("colored_output.md", "w", encoding="utf-8") as f:
+    f.write(markdown)
 ```
 
 ### Performance benchmark
