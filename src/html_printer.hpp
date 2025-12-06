@@ -268,6 +268,7 @@ public:
         output << "<!DOCTYPE html>\n";
         output << "<html>\n<head>\n";
         output << "  <meta charset=\"UTF-8\">\n";
+        output << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
         output << "  <title>" << title << "</title>\n";
         output << "  <style>\n";
         output << "    body {\n";
