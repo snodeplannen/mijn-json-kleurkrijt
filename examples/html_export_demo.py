@@ -117,6 +117,7 @@ index_html = """<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Colored JSON HTML Export Demo</title>
     <style>
         body {
