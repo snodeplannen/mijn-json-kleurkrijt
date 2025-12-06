@@ -9,9 +9,12 @@ ext_modules = [
         "colored_json",
         [
             "src/bindings.cpp",
+            "third_party/simdjson/src/simdjson.cpp",
         ],
         include_dirs=[
             "src",
+            "third_party/simdjson/include",
+            "third_party/simdjson/src",
             pybind11.get_include(),
         ],
         cxx_std=17,

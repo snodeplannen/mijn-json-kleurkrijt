@@ -325,9 +325,31 @@ PYBIND11_MODULE(colored_json, m) {
             >>> colored_json.print(data, style)
       )doc");
     
-    m.def("format", [](py::handle obj, const colored_json::Style& style) {
-        colored_json::Printer printer(style);
-        return printer.print(obj);
+    // Helper functie voor dual mode: check of input JSON string is
+    auto isJsonString = [](py::handle obj) -> bool {
+        if (py::isinstance<py::str>(obj)) {
+            std::string str_val = py::str(obj);
+            // Quick check: moet beginnen met { of [
+            if (!str_val.empty() && (str_val[0] == '{' || str_val[0] == '[')) {
+                return true;
+            }
+        }
+        return false;
+    };
+    
+    m.def("format", [isJsonString](py::handle obj, const colored_json::Style& style) {
+        // Dual mode: check of input JSON string is
+        if (isJsonString(obj)) {
+            // JSON string path - release GIL voor snelle processing
+            std::string json_str = py::str(obj);
+            py::gil_scoped_release release;
+            colored_json::Printer printer(style);
+            return printer.printFromJson(json_str);
+        } else {
+            // Python object path (huidige implementatie)
+            colored_json::Printer printer(style);
+            return printer.print(obj);
+        }
     }, py::arg("obj"), py::arg("style") = colored_json::Style{},
       R"doc(
         Formatteer een Python object als gekleurde string.
@@ -347,6 +369,36 @@ PYBIND11_MODULE(colored_json, m) {
             >>> print(result)
             >>> with open("output.txt", "w") as f:
             ...     f.write(colored_json.format(data, style))
+            
+        Ondersteunt ook JSON strings als input:
+            >>> json_str = '{"name": "Alice", "age": 30}'
+            >>> colored_json.format(json_str)
+      )doc");
+    
+    // Expliciete functie voor JSON strings
+    m.def("format_from_json", [](const std::string& json_str, const colored_json::Style& style) {
+        py::gil_scoped_release release;
+        colored_json::Printer printer(style);
+        return printer.printFromJson(json_str);
+    }, py::arg("json_str"), py::arg("style") = colored_json::Style{},
+      R"doc(
+        Formatteer een JSON string als gekleurde string (expliciete functie).
+        
+        Deze functie is geoptimaliseerd voor JSON string input en gebruikt
+        simdjson voor razendsnelle parsing. De GIL wordt vrijgegeven tijdens
+        processing voor betere multi-threaded performance.
+        
+        Args:
+            json_str: JSON string om te formatteren
+            style: Optionele Style object (standaard: Style())
+        
+        Returns:
+            str: Gekleurde string met ANSI escape codes
+        
+        Voorbeelden:
+            >>> json_str = '{"name": "Alice", "age": 30}'
+            >>> result = colored_json.format_from_json(json_str)
+            >>> print(result)
       )doc");
     
     // HTML export
@@ -371,7 +423,18 @@ PYBIND11_MODULE(colored_json, m) {
                 Args:
                     style: Style object voor kleuring en formatting
             )doc")
-        .def("print", &colored_json::HtmlPrinter::print,
+        .def("print", [isJsonString](colored_json::HtmlPrinter& self, py::handle obj,
+                                     const std::string& title,
+                                     const std::string& background_color,
+                                     const std::string& font_family) {
+            if (isJsonString(obj)) {
+                std::string json_str = py::str(obj);
+                py::gil_scoped_release release;
+                return self.printFromJson(json_str, title, background_color, font_family);
+            } else {
+                return self.print(obj, title, background_color, font_family);
+            }
+        },
              py::arg("obj"),
              py::arg("title") = "Colored JSON",
              py::arg("background_color") = "#1e1e1e",
@@ -380,7 +443,7 @@ PYBIND11_MODULE(colored_json, m) {
                 Genereer complete HTML pagina met gekleurde JSON.
                 
                 Args:
-                    obj: Python dict, list, of ander object om te formatteren
+                    obj: Python dict, list, JSON string, of ander object om te formatteren
                     title: Titel voor de HTML pagina
                     background_color: Achtergrondkleur (CSS kleur string)
                     font_family: Font familie voor de JSON weergave
@@ -389,12 +452,18 @@ PYBIND11_MODULE(colored_json, m) {
                     str: Complete HTML string met inline styles
             )doc");
     
-    m.def("to_html", [](py::handle obj, const colored_json::Style& style,
+    m.def("to_html", [isJsonString](py::handle obj, const colored_json::Style& style,
                         const std::string& title,
                         const std::string& background_color,
                         const std::string& font_family) {
         colored_json::HtmlPrinter printer(style);
-        return printer.print(obj, title, background_color, font_family);
+        if (isJsonString(obj)) {
+            std::string json_str = py::str(obj);
+            py::gil_scoped_release release;
+            return printer.printFromJson(json_str, title, background_color, font_family);
+        } else {
+            return printer.print(obj, title, background_color, font_family);
+        }
     }, py::arg("obj"),
         py::arg("style") = colored_json::Style{},
         py::arg("title") = "Colored JSON",
@@ -418,8 +487,45 @@ PYBIND11_MODULE(colored_json, m) {
             
             Voorbeelden:
                 >>> html = colored_json.to_html(data, style, title="My JSON")
-                >>> with open("output.html", "w", encoding="utf-8") as f:
-                ...     f.write(html)
+            >>> with open("output.html", "w", encoding="utf-8") as f:
+            ...     f.write(html)
+            
+        Ondersteunt ook JSON strings als input:
+            >>> json_str = '{"name": "Alice", "age": 30}'
+            >>> html = colored_json.to_html(json_str, style)
+        )doc");
+    
+    // Expliciete functie voor JSON strings
+    m.def("to_html_from_json", [](const std::string& json_str, const colored_json::Style& style,
+                                  const std::string& title,
+                                  const std::string& background_color,
+                                  const std::string& font_family) {
+        py::gil_scoped_release release;
+        colored_json::HtmlPrinter printer(style);
+        return printer.printFromJson(json_str, title, background_color, font_family);
+    }, py::arg("json_str"),
+        py::arg("style") = colored_json::Style{},
+        py::arg("title") = "Colored JSON",
+        py::arg("background_color") = "#1e1e1e",
+        py::arg("font_family") = "Consolas, 'Courier New', monospace",
+        R"doc(
+            Genereer HTML output van JSON string (expliciete functie).
+            
+            Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+            
+            Args:
+                json_str: JSON string om te formatteren
+                style: Optionele Style object (standaard: Style())
+                title: Titel voor de HTML pagina
+                background_color: Achtergrondkleur (CSS kleur string)
+                font_family: Font familie voor de JSON weergave
+            
+            Returns:
+                str: Complete HTML string met inline styles
+            
+            Voorbeelden:
+                >>> json_str = '{"name": "Alice", "age": 30}'
+                >>> html = colored_json.to_html_from_json(json_str, style)
         )doc");
     
     // Markdown export
@@ -444,7 +550,17 @@ PYBIND11_MODULE(colored_json, m) {
                 Args:
                     style: Style object voor kleuring en formatting
             )doc")
-        .def("print", &colored_json::MarkdownPrinter::print,
+        .def("print", [isJsonString](colored_json::MarkdownPrinter& self, py::handle obj,
+                                     const std::string& title,
+                                     const std::string& language) {
+            if (isJsonString(obj)) {
+                std::string json_str = py::str(obj);
+                py::gil_scoped_release release;
+                return self.printFromJson(json_str, title, language);
+            } else {
+                return self.print(obj, title, language);
+            }
+        },
              py::arg("obj"),
              py::arg("title") = "Colored JSON",
              py::arg("language") = "json",
@@ -455,14 +571,25 @@ PYBIND11_MODULE(colored_json, m) {
                 maar de JSON formatting blijft intact.
                 
                 Args:
-                    obj: Python dict, list, of ander object om te formatteren
+                    obj: Python dict, list, JSON string, of ander object om te formatteren
                     title: Titel voor de Markdown sectie (optioneel)
                     language: Code block language identifier (standaard: "json")
                 
                 Returns:
                     str: Markdown string met code block
             )doc")
-        .def("print_html", &colored_json::MarkdownPrinter::printHtml,
+        .def("print_html", [isJsonString](colored_json::MarkdownPrinter& self, py::handle obj,
+                                          const std::string& title,
+                                          const std::string& background_color,
+                                          const std::string& font_family) {
+            if (isJsonString(obj)) {
+                std::string json_str = py::str(obj);
+                py::gil_scoped_release release;
+                return self.printHtmlFromJson(json_str, title, background_color, font_family);
+            } else {
+                return self.printHtml(obj, title, background_color, font_family);
+            }
+        },
              py::arg("obj"),
              py::arg("title") = "Colored JSON",
              py::arg("background_color") = "#1e1e1e",
@@ -474,7 +601,7 @@ PYBIND11_MODULE(colored_json, m) {
                 renderers die HTML ondersteunen (GitHub, GitLab, etc.).
                 
                 Args:
-                    obj: Python dict, list, of ander object om te formatteren
+                    obj: Python dict, list, JSON string, of ander object om te formatteren
                     title: Titel voor de Markdown sectie (optioneel)
                     background_color: Achtergrondkleur (CSS kleur string)
                     font_family: Font familie voor de JSON weergave
@@ -483,11 +610,17 @@ PYBIND11_MODULE(colored_json, m) {
                     str: Markdown string met HTML code block
             )doc");
     
-    m.def("to_markdown", [](py::handle obj, const colored_json::Style& style,
+    m.def("to_markdown", [isJsonString](py::handle obj, const colored_json::Style& style,
                            const std::string& title,
                            const std::string& language) {
         colored_json::MarkdownPrinter printer(style);
-        return printer.print(obj, title, language);
+        if (isJsonString(obj)) {
+            std::string json_str = py::str(obj);
+            py::gil_scoped_release release;
+            return printer.printFromJson(json_str, title, language);
+        } else {
+            return printer.print(obj, title, language);
+        }
     }, py::arg("obj"),
         py::arg("style") = colored_json::Style{},
         py::arg("title") = "Colored JSON",
@@ -509,16 +642,56 @@ PYBIND11_MODULE(colored_json, m) {
             
             Voorbeelden:
                 >>> md = colored_json.to_markdown(data, style, title="Example")
-                >>> with open("output.md", "w", encoding="utf-8") as f:
-                ...     f.write(md)
+            >>> with open("output.md", "w", encoding="utf-8") as f:
+            ...     f.write(md)
+            
+        Ondersteunt ook JSON strings als input:
+            >>> json_str = '{"name": "Alice", "age": 30}'
+            >>> md = colored_json.to_markdown(json_str, style)
         )doc");
     
-    m.def("to_markdown_html", [](py::handle obj, const colored_json::Style& style,
+    // Expliciete functie voor JSON strings
+    m.def("to_markdown_from_json", [](const std::string& json_str, const colored_json::Style& style,
+                                     const std::string& title,
+                                     const std::string& language) {
+        py::gil_scoped_release release;
+        colored_json::MarkdownPrinter printer(style);
+        return printer.printFromJson(json_str, title, language);
+    }, py::arg("json_str"),
+        py::arg("style") = colored_json::Style{},
+        py::arg("title") = "Colored JSON",
+        py::arg("language") = "json",
+        R"doc(
+            Genereer Markdown output van JSON string (expliciete functie).
+            
+            Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+            
+            Args:
+                json_str: JSON string om te formatteren
+                style: Optionele Style object (standaard: Style())
+                title: Titel voor de Markdown sectie
+                language: Code block language identifier (standaard: "json")
+            
+            Returns:
+                str: Markdown string met code block
+            
+            Voorbeelden:
+                >>> json_str = '{"name": "Alice", "age": 30}'
+                >>> md = colored_json.to_markdown_from_json(json_str, style)
+        )doc");
+    
+    m.def("to_markdown_html", [isJsonString](py::handle obj, const colored_json::Style& style,
                                  const std::string& title,
                                  const std::string& background_color,
                                  const std::string& font_family) {
         colored_json::MarkdownPrinter printer(style);
-        return printer.printHtml(obj, title, background_color, font_family);
+        if (isJsonString(obj)) {
+            std::string json_str = py::str(obj);
+            py::gil_scoped_release release;
+            return printer.printHtmlFromJson(json_str, title, background_color, font_family);
+        } else {
+            return printer.printHtml(obj, title, background_color, font_family);
+        }
     }, py::arg("obj"),
         py::arg("style") = colored_json::Style{},
         py::arg("title") = "Colored JSON",
@@ -542,8 +715,45 @@ PYBIND11_MODULE(colored_json, m) {
             
             Voorbeelden:
                 >>> md = colored_json.to_markdown_html(data, style, title="Colored JSON")
-                >>> with open("colored.md", "w", encoding="utf-8") as f:
-                ...     f.write(md)
+            >>> with open("colored.md", "w", encoding="utf-8") as f:
+            ...     f.write(md)
+            
+        Ondersteunt ook JSON strings als input:
+            >>> json_str = '{"name": "Alice", "age": 30}'
+            >>> md = colored_json.to_markdown_html(json_str, style)
+        )doc");
+    
+    // Expliciete functie voor JSON strings
+    m.def("to_markdown_html_from_json", [](const std::string& json_str, const colored_json::Style& style,
+                                            const std::string& title,
+                                            const std::string& background_color,
+                                            const std::string& font_family) {
+        py::gil_scoped_release release;
+        colored_json::MarkdownPrinter printer(style);
+        return printer.printHtmlFromJson(json_str, title, background_color, font_family);
+    }, py::arg("json_str"),
+        py::arg("style") = colored_json::Style{},
+        py::arg("title") = "Colored JSON",
+        py::arg("background_color") = "#1e1e1e",
+        py::arg("font_family") = "Consolas, 'Courier New', monospace",
+        R"doc(
+            Genereer Markdown met HTML code block van JSON string (expliciete functie).
+            
+            Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+            
+            Args:
+                json_str: JSON string om te formatteren
+                style: Optionele Style object (standaard: Style())
+                title: Titel voor de Markdown sectie
+                background_color: Achtergrondkleur (CSS kleur string)
+                font_family: Font familie voor de JSON weergave
+            
+            Returns:
+                str: Markdown string met HTML code block
+            
+            Voorbeelden:
+                >>> json_str = '{"name": "Alice", "age": 30}'
+                >>> md = colored_json.to_markdown_html_from_json(json_str, style)
         )doc");
     
     // Expose builtin colors

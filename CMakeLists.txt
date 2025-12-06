@@ -6,7 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(pybind11 REQUIRED)
 
+# simdjson dependency via FetchContent
+include(FetchContent)
+FetchContent_Declare(
+    simdjson
+    GIT_REPOSITORY https://github.com/simdjson/simdjson.git
+    GIT_TAG v3.7.0
+)
+FetchContent_MakeAvailable(simdjson)
+
 pybind11_add_module(colored_json src/bindings.cpp)
+
+# Link simdjson
+target_link_libraries(colored_json PRIVATE simdjson)
 
 # Compile flags voor maximale snelheid
 if(MSVC)

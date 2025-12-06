@@ -5,7 +5,7 @@ Deze file bevat type hints voor alle classes, functies en enums
 die geëxposeerd worden via pybind11.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 
 # Enums
 class ColorMode:
@@ -155,11 +155,13 @@ class Printer:
         """
         ...
     
-    def print(self, obj: Any) -> str:
-        """Formatteer en print een Python object.
+    def print(self, obj: Union[str, Any]) -> str:
+        """Formatteer en print een Python object of JSON string.
+        
+        Ondersteunt zowel Python objecten (dict, list) als JSON strings.
         
         Args:
-            obj: Python dict, list, of ander object om te formatteren
+            obj: Python dict, list, JSON string, of ander object om te formatteren
         
         Returns:
             Gekleurde string met ANSI escape codes
@@ -179,15 +181,17 @@ class HtmlPrinter:
     
     def print(
         self,
-        obj: Any,
+        obj: Union[str, Any],
         title: str = "Colored JSON",
         background_color: str = "#1e1e1e",
         font_family: str = "Consolas, 'Courier New', monospace"
     ) -> str:
         """Genereer complete HTML pagina met gekleurde JSON.
         
+        Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+        
         Args:
-            obj: Python dict, list, of ander object om te formatteren
+            obj: Python dict, list, JSON string, of ander object om te formatteren
             title: Titel voor de HTML pagina
             background_color: Achtergrondkleur (CSS kleur string)
             font_family: Font familie voor de JSON weergave
@@ -210,14 +214,16 @@ class MarkdownPrinter:
     
     def print(
         self,
-        obj: Any,
+        obj: Union[str, Any],
         title: str = "Colored JSON",
         language: str = "json"
     ) -> str:
         """Genereer Markdown met code block (zonder kleuren).
         
+        Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+        
         Args:
-            obj: Python dict, list, of ander object om te formatteren
+            obj: Python dict, list, JSON string, of ander object om te formatteren
             title: Titel voor de Markdown sectie (optioneel)
             language: Code block language identifier (standaard: "json")
         
@@ -228,15 +234,17 @@ class MarkdownPrinter:
     
     def print_html(
         self,
-        obj: Any,
+        obj: Union[str, Any],
         title: str = "Colored JSON",
         background_color: str = "#1e1e1e",
         font_family: str = "Consolas, 'Courier New', monospace"
     ) -> str:
         """Genereer Markdown met HTML code block voor gekleurde JSON.
         
+        Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+        
         Args:
-            obj: Python dict, list, of ander object om te formatteren
+            obj: Python dict, list, JSON string, of ander object om te formatteren
             title: Titel voor de Markdown sectie (optioneel)
             background_color: Achtergrondkleur (CSS kleur string)
             font_family: Font familie voor de JSON weergave
@@ -250,17 +258,37 @@ class MarkdownPrinter:
 def print(obj: Any, style: Style = ...) -> None:
     """Print een Python object direct naar de console met kleuren.
     
+    Let op: Deze functie gebruikt py::print() en vereist de GIL.
+    Voor JSON string input, gebruik format() of format_from_json() in plaats daarvan.
+    
     Args:
         obj: Python dict, list, of ander object om te printen
         style: Optionele Style object (standaard: Style())
     """
     ...
 
-def format(obj: Any, style: Style = ...) -> str:
-    """Formatteer een Python object als gekleurde string.
+def format(obj: Union[str, Any], style: Style = ...) -> str:
+    """Formatteer een Python object of JSON string als gekleurde string.
+    
+    Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+    JSON strings worden automatisch gedetecteerd en geoptimaliseerd verwerkt.
     
     Args:
-        obj: Python dict, list, of ander object om te formatteren
+        obj: Python dict, list, JSON string, of ander object om te formatteren
+        style: Optionele Style object (standaard: Style())
+    
+    Returns:
+        Gekleurde string met ANSI escape codes
+    """
+    ...
+
+def format_from_json(json_str: str, style: Style = ...) -> str:
+    """Formatteer een JSON string als gekleurde string (expliciete functie).
+    
+    Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+    
+    Args:
+        json_str: JSON string om te formatteren
         style: Optionele Style object (standaard: Style())
     
     Returns:
@@ -269,7 +297,7 @@ def format(obj: Any, style: Style = ...) -> str:
     ...
 
 def to_html(
-    obj: Any,
+    obj: Union[str, Any],
     style: Style = ...,
     title: str = "Colored JSON",
     background_color: str = "#1e1e1e",
@@ -277,8 +305,10 @@ def to_html(
 ) -> str:
     """Genereer HTML output van gekleurde JSON (convenience functie).
     
+    Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+    
     Args:
-        obj: Python dict, list, of ander object om te formatteren
+        obj: Python dict, list, JSON string, of ander object om te formatteren
         style: Optionele Style object (standaard: Style())
         title: Titel voor de HTML pagina
         background_color: Achtergrondkleur (CSS kleur string, bijv. "#1e1e1e")
@@ -289,16 +319,62 @@ def to_html(
     """
     ...
 
+def to_html_from_json(
+    json_str: str,
+    style: Style = ...,
+    title: str = "Colored JSON",
+    background_color: str = "#1e1e1e",
+    font_family: str = "Consolas, 'Courier New', monospace"
+) -> str:
+    """Genereer HTML output van JSON string (expliciete functie).
+    
+    Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+    
+    Args:
+        json_str: JSON string om te formatteren
+        style: Optionele Style object (standaard: Style())
+        title: Titel voor de HTML pagina
+        background_color: Achtergrondkleur (CSS kleur string)
+        font_family: Font familie voor de JSON weergave
+    
+    Returns:
+        Complete HTML string met inline styles
+    """
+    ...
+
 def to_markdown(
-    obj: Any,
+    obj: Union[str, Any],
     style: Style = ...,
     title: str = "Colored JSON",
     language: str = "json"
 ) -> str:
     """Genereer Markdown output met code block (convenience functie).
     
+    Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+    
     Args:
-        obj: Python dict, list, of ander object om te formatteren
+        obj: Python dict, list, JSON string, of ander object om te formatteren
+        style: Optionele Style object (standaard: Style())
+        title: Titel voor de Markdown sectie
+        language: Code block language identifier (standaard: "json")
+    
+    Returns:
+        Markdown string met code block
+    """
+    ...
+
+def to_markdown_from_json(
+    json_str: str,
+    style: Style = ...,
+    title: str = "Colored JSON",
+    language: str = "json"
+) -> str:
+    """Genereer Markdown output van JSON string (expliciete functie).
+    
+    Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+    
+    Args:
+        json_str: JSON string om te formatteren
         style: Optionele Style object (standaard: Style())
         title: Titel voor de Markdown sectie
         language: Code block language identifier (standaard: "json")
@@ -309,7 +385,7 @@ def to_markdown(
     ...
 
 def to_markdown_html(
-    obj: Any,
+    obj: Union[str, Any],
     style: Style = ...,
     title: str = "Colored JSON",
     background_color: str = "#1e1e1e",
@@ -317,11 +393,36 @@ def to_markdown_html(
 ) -> str:
     """Genereer Markdown met HTML code block voor gekleurde JSON (convenience functie).
     
+    Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+    
     Args:
-        obj: Python dict, list, of ander object om te formatteren
+        obj: Python dict, list, JSON string, of ander object om te formatteren
         style: Optionele Style object (standaard: Style())
         title: Titel voor de Markdown sectie
         background_color: Achtergrondkleur (CSS kleur string, bijv. "#1e1e1e")
+        font_family: Font familie voor de JSON weergave
+    
+    Returns:
+        Markdown string met HTML code block
+    """
+    ...
+
+def to_markdown_html_from_json(
+    json_str: str,
+    style: Style = ...,
+    title: str = "Colored JSON",
+    background_color: str = "#1e1e1e",
+    font_family: str = "Consolas, 'Courier New', monospace"
+) -> str:
+    """Genereer Markdown met HTML code block van JSON string (expliciete functie).
+    
+    Geoptimaliseerd voor JSON string input met simdjson en GIL release.
+    
+    Args:
+        json_str: JSON string om te formatteren
+        style: Optionele Style object (standaard: Style())
+        title: Titel voor de Markdown sectie
+        background_color: Achtergrondkleur (CSS kleur string)
         font_family: Font familie voor de JSON weergave
     
     Returns:
