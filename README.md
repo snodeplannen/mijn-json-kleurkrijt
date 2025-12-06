@@ -15,6 +15,7 @@ Een razendsnelle C++ module met pybind11 voor gekleurde weergave van Python dict
 - **TTY support**: Detecteert automatisch of terminal kleuren ondersteunt
 - **HTML export**: Genereer complete HTML pagina's met gekleurde JSON
 - **Markdown export**: Genereer Markdown met gekleurde JSON (HTML code blocks)
+- **Type hints**: Volledige type stubs (`.pyi`) voor IDE ondersteuning en type checking
 
 ## Installatie
 
@@ -445,12 +446,38 @@ Run de demonstratie:
 python examples/demo.py
 ```
 
+## Type Hints
+
+De module bevat volledige type stubs (`.pyi`) voor sterke typing in Python. Dit betekent:
+
+- **IDE ondersteuning**: Autocomplete en type checking in VS Code, PyCharm, etc.
+- **Type checkers**: Werkt met mypy, pyright, en andere type checkers
+- **Betere code kwaliteit**: Type hints helpen bij het voorkomen van bugs
+
+### Voorbeeld met type hints
+
+```python
+from typing import Dict, Any
+import colored_json
+
+def process_json(data: Dict[str, Any]) -> str:
+    """Functie met type hints."""
+    style = colored_json.Style.get_preset("dracula")
+    return colored_json.format(data, style)
+
+# Type checker weet nu dat result een str is
+result: str = process_json({"name": "Alice"})
+```
+
+De type stubs worden automatisch meegenomen bij installatie en zijn beschikbaar voor alle IDE's en type checkers.
+
 ## Technische Details
 
 - **C++ Standard**: C++17
 - **Dependencies**: pybind11 >= 2.10.0
 - **Platforms**: Windows, Linux, macOS
 - **Compilers**: MSVC, GCC, Clang
+- **Type Hints**: Volledige `.pyi` stub files voor Python 3.7+
 
 ## Licentie
 

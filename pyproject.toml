@@ -26,5 +26,5 @@ dev = [
 packages = []
 
 [tool.setuptools.package-data]
-"*" = ["*.hpp", "*.cpp"]
+"*" = ["*.hpp", "*.cpp", "*.pyi"]
 

@@ -1,13 +1,25 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/pytypes.h>
 #include "printer.hpp"
 #include "html_printer.hpp"
 #include "markdown_printer.hpp"
 #include "style.hpp"
+#include <stdexcept>
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(colored_json, m) {
+    // Register exception translator voor betere Python integratie
+    py::register_exception_translator([](std::exception_ptr p) {
+        try {
+            if (p) std::rethrow_exception(p);
+        } catch (const std::runtime_error& e) {
+            PyErr_SetString(PyExc_RuntimeError, e.what());
+        } catch (const std::exception& e) {
+            PyErr_SetString(PyExc_RuntimeError, e.what());
+        }
+    });
     m.doc() = R"doc(
         Razendsnelle gekleurde JSON/dict printer voor Python.
         
@@ -567,5 +579,9 @@ PYBIND11_MODULE(colored_json, m) {
     colors.attr("bright_magenta") = colored_json::colors::bright_magenta;
     colors.attr("bright_cyan") = colored_json::colors::bright_cyan;
     colors.attr("bright_white") = colored_json::colors::bright_white;
+    
+    // Type hints worden geleverd via colored_json.pyi stub file
+    // Dit is de standaard aanpak voor C++ extensions met pybind11
+    // De stub file wordt automatisch gebruikt door IDE's en type checkers
 }
 
