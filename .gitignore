@@ -68,6 +68,10 @@ ENV/
 .coverage
 htmlcov/
 
+# HTML output
+html_output/
+*.html
+
 # mypy
 .mypy_cache/
 .dmypy.json

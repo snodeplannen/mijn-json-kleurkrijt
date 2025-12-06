@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "printer.hpp"
+#include "html_printer.hpp"
 #include "style.hpp"
 
 namespace py = pybind11;
@@ -88,6 +89,29 @@ PYBIND11_MODULE(colored_json, m) {
         return printer.print(obj);
     }, py::arg("obj"), py::arg("style") = colored_json::Style{},
       "Geef gekleurde string terug");
+    
+    // HTML export
+    py::class_<colored_json::HtmlPrinter>(m, "HtmlPrinter")
+        .def(py::init<const colored_json::Style&>())
+        .def("print", &colored_json::HtmlPrinter::print,
+             py::arg("obj"),
+             py::arg("title") = "Colored JSON",
+             py::arg("background_color") = "#1e1e1e",
+             py::arg("font_family") = "Consolas, 'Courier New', monospace",
+             "Genereer HTML output");
+    
+    m.def("to_html", [](py::handle obj, const colored_json::Style& style,
+                        const std::string& title,
+                        const std::string& background_color,
+                        const std::string& font_family) {
+        colored_json::HtmlPrinter printer(style);
+        return printer.print(obj, title, background_color, font_family);
+    }, py::arg("obj"),
+        py::arg("style") = colored_json::Style{},
+        py::arg("title") = "Colored JSON",
+        py::arg("background_color") = "#1e1e1e",
+        py::arg("font_family") = "Consolas, 'Courier New', monospace",
+        "Genereer HTML output van gekleurde JSON");
     
     // Expose builtin colors
     py::module_ colors = m.def_submodule("colors", "Ingebouwde kleuren");

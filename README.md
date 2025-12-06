@@ -13,6 +13,7 @@ Een razendsnelle C++ module met pybind11 voor gekleurde weergave van Python dict
 - **Python integratie**: Werkt direct met Python dicts, lists, etc.
 - **Custom styling**: Volledig aanpasbare kleuren en stijlen
 - **TTY support**: Detecteert automatisch of terminal kleuren ondersteunt
+- **HTML export**: Genereer complete HTML pagina's met gekleurde JSON
 
 ## Installatie
 
@@ -75,6 +76,11 @@ colored_json.print(data, style)
 # Format string (niet direct printen)
 formatted = colored_json.format(data, style)
 print(formatted)
+
+# HTML export
+html = colored_json.to_html(data, style, title="My JSON", background_color="#1e1e1e")
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html)
 ```
 
 ## API Referentie
@@ -96,6 +102,26 @@ Retourneert een gekleurde string zonder direct te printen.
 - `style`: Optionele Style object (standaard: Style())
 
 **Returns:** Gekleurde string met ANSI escape codes
+
+### `colored_json.to_html(obj, style=None, title="Colored JSON", background_color="#1e1e1e", font_family="Consolas, 'Courier New', monospace")`
+
+Genereert een complete HTML pagina met gekleurde JSON.
+
+**Parameters:**
+- `obj`: Python dict, list, of ander object om te formatteren
+- `style`: Optionele Style object (standaard: Style())
+- `title`: Titel voor de HTML pagina
+- `background_color`: Achtergrondkleur (CSS kleur string, bijv. "#1e1e1e" of "rgb(30, 30, 30)")
+- `font_family`: Font familie voor de JSON weergave
+
+**Returns:** Complete HTML string met inline styles
+
+**Voorbeeld:**
+```python
+html = colored_json.to_html(data, style, title="My JSON", background_color="#282a36")
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html)
+```
 
 ### `Style` Class
 
@@ -267,6 +293,27 @@ colored_json.print(data, style)
 - **github**: Donkere quotes
 - **minimal**: Subtiele grijze quotes
 - **neon**: Witte quotes voor contrast
+
+### HTML export
+
+```python
+import colored_json
+
+data = {
+    "user": {"name": "Alice", "age": 30},
+    "status": "active"
+}
+
+# Standaard HTML export
+style = colored_json.Style.get_preset("dracula")
+html = colored_json.to_html(data, style, title="My JSON", background_color="#282a36")
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html)
+
+# Met custom styling
+style.set_key_color("user", colored_json.Color(255, 0, 0))
+html = colored_json.to_html(data, style, background_color="#1e1e1e")
+```
 
 ### Performance benchmark
 
