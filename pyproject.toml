@@ -28,3 +28,6 @@ packages = []
 [tool.setuptools.package-data]
 "*" = ["*.hpp", "*.cpp", "*.pyi"]
 
+[[tool.mypy.overrides]]
+module = ["pybind11.*"]
+follow_untyped_imports = true
