@@ -21,6 +21,83 @@ Een razendsnelle C++ module met pybind11 voor gekleurde weergave van Python dict
 - **Markdown export**: Genereer Markdown met gekleurde JSON (HTML code blocks)
 - **Type hints**: Volledige type stubs (`.pyi`) voor IDE ondersteuning en type checking
 
+## wjq - Windows JSON Query Tool
+
+De `wjq` tool is een standalone command-line executable voor snelle JSON formatting op Windows. Het is gebouwd met C++ en simdjson voor maximale performance.
+
+### Features
+
+- **Razendsnelle JSON parsing** met simdjson (SIMD-optimized)
+- **JSONL support**: Verwerk meerdere JSON documenten in één bestand (JSON Lines format)
+- **Kleurthema's**: 7 ingebouwde themes (default, dracula, solarized, monokai, github, minimal, neon)
+- **Flexibele output**: Compact of geïndenteerd met configureerbare indent size
+- **Kleurmodi**: Auto-detectie, 16, 256, truecolor, of disabled
+- **Windows ANSI support**: Automatische activering van ANSI escape codes in Windows Terminal
+- **Pipe support**: Lees van stdin of bestand
+
+### Installatie
+
+```bash
+# Build wjq tool
+cd wjq
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build . --config Release
+
+# Executable is beschikbaar in: wjq/build/Release/wjq.exe
+```
+
+### Gebruik
+
+```bash
+# Basis gebruik
+wjq data.json
+
+# Met thema
+wjq -t dracula data.json
+
+# Compact mode
+wjq -c data.json
+
+# Custom indent size
+wjq -i 4 data.json
+
+# Kleurmodus specificeren
+wjq --color-mode 256 data.json
+
+# Van stdin
+cat data.json | wjq
+
+# JSONL bestand (meerdere JSON documenten)
+wjq mixed.jsonl
+```
+
+### Opties
+
+```
+-t, --theme THEMA      Kleurenschema (default, dracula, solarized, monokai, github, minimal, neon)
+-m, --color-mode MODE  Kleurmodus: auto, 16, 256, truecolor, disabled
+-c, --compact          Compacte output (geen extra spaties/nieuwe regels)
+-i, --indent N         Indentatiegrootte (standaard: 2)
+-h, --help             Toon help
+-v, --version          Toon versie
+```
+
+### Voorbeelden
+
+```bash
+# Dracula theme met 256 kleuren
+wjq -t dracula --color-mode 256 data.json
+
+# Compact output met monokai theme
+wjq -c -t monokai data.json
+
+# Custom indent met neon theme
+wjq -i 4 -t neon data.json
+
+# Verwerk JSONL bestand
+wjq mixed.jsonl
+```
+
 ## Installatie
 
 ### Vereisten
@@ -514,6 +591,67 @@ print(f"Speedup: {duration1/duration2:.2f}x")
 Typische performance:
 - **Python objecten**: ~5-10ms voor 10.000 items
 - **JSON strings**: ~2-5ms voor 10.000 items (2-5x sneller met simdjson en GIL release)
+
+## Development Setup
+
+### IDE Configuration (VS Code)
+
+Voor optimale IntelliSense en code completion in VS Code:
+
+#### Vereisten
+- **C/C++ Extension** (Microsoft)
+- **clangd Extension** (LLVM) - Aanbevolen voor betere IntelliSense
+
+#### Configuratie
+
+Het project bevat `.clangd` configuratiebestanden die automatisch de juiste include paths instellen:
+
+```yaml
+# .clangd (root)
+CompileFlags:
+  Add:
+    - "-IC:/CPP/mijn-json-kleurkrijt/wjq/libs/simdjson"
+    - "-IC:/CPP/mijn-json-kleurkrijt/wjq/src"
+    - "-IC:/CPP/mijn-json-kleurkrijt/src"
+    - "-IC:/CPP/mijn-json-kleurkrijt/.venv/Lib/site-packages/pybind11/include"
+    - "-IC:/Users/administrator/AppData/Roaming/uv/python/cpython-3.12.9-windows-x86_64-none/Include"
+    - "-std=c++17"
+    - "-D_WIN32"
+```
+
+#### VS Code Settings
+
+Het project bevat `.vscode/c_cpp_properties.json` met de correcte configuratie voor:
+- Include paths voor simdjson, pybind11, en Python headers
+- C++17 standaard
+- MSVC compiler path
+- Browse paths voor symbol resolution
+
+#### IntelliSense Troubleshooting
+
+Als je IntelliSense errors ziet:
+
+1. **Restart clangd server**:
+   - `Ctrl+Shift+P` → "clangd: Restart language server"
+
+2. **Rebuild IntelliSense database**:
+   - `Ctrl+Shift+P` → "C/C++: Reset IntelliSense Database"
+
+3. **Check include paths**:
+   - Zorg dat simdjson submodule is geïnitialiseerd: `git submodule update --init --recursive`
+   - Controleer of Python virtual environment actief is
+
+### CMake Configuration
+
+Het project gebruikt moderne CMake met `FindPython`:
+
+```cmake
+# Use modern FindPython module
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 REQUIRED)
+```
+
+Dit voorkomt deprecation warnings en zorgt voor betere compatibiliteit met nieuwere CMake versies.
 
 ## Build Instructies
 

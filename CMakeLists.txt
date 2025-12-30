@@ -4,6 +4,9 @@ project(colored_json)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Use modern FindPython module instead of deprecated FindPythonLibs
+set(PYBIND11_FINDPYTHON ON)
+
 find_package(pybind11 REQUIRED)
 
 # simdjson dependency via FetchContent
@@ -38,5 +41,9 @@ else()
         -Wall
         -Wextra
     )
-endif()
+    endif()
+
+
+# Add wjq tool
+add_subdirectory(wjq)
 

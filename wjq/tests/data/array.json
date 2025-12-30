@@ -1,0 +1,10 @@
+[
+    1,
+    2,
+    "three",
+    {
+        "four": 4
+    },
+    null,
+    false
+]

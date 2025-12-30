@@ -1,0 +1,42 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/wjq/src",
+                "${workspaceFolder}/wjq/libs/simdjson",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/.venv/Lib/site-packages/pybind11/include",
+                "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/include",
+                "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/ATLMFC/include",
+                "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/VS/include",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.26100.0/ucrt",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.26100.0/um",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.26100.0/shared",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.26100.0/winrt",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.26100.0/cppwinrt",
+                "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/include/um",
+                "C:/Users/administrator/AppData/Roaming/uv/python/cpython-3.12.9-windows-x86_64-none/Include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.26100.0",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64",
+            "compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe",
+            "compileCommands": "${workspaceFolder}/wjq/build/compile_commands.json",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/wjq/src",
+                    "${workspaceFolder}/wjq/libs/simdjson"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

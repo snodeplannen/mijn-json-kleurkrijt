@@ -1,0 +1,13 @@
+CompileFlags:
+  Add:
+    - "-IC:/CPP/mijn-json-kleurkrijt/wjq/libs/simdjson"
+    - "-IC:/CPP/mijn-json-kleurkrijt/wjq/src"
+    - "-std=c++20"
+    - "-D_WIN32"
+  Remove:
+    - "-W*"
+    - "/W*"
+
+Diagnostics:
+  UnusedIncludes: Relaxed
+  MissingIncludes: Relaxed

@@ -20,6 +20,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.venv/
+venv/
+env/
+ENV/
 
 # C++ build artifacts
 *.o
@@ -29,6 +33,11 @@ wheels/
 *.dylib
 *.a
 *.lib
+*.exp
+*.ilk
+*.pdb
+*.iobj
+*.ipdb
 
 # CMake
 CMakeCache.txt
@@ -44,24 +53,43 @@ _deps/
 
 # Build directories
 build/
+build*/
 bin/
-lib/
+out/
+x64/
+x86/
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
 
-# IDE
-.vscode/
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE - Keep specific VS Code config, ignore rest
+.vscode/*
+!.vscode/c_cpp_properties.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea/
 *.swp
 *.swo
 *~
 
+# clangd
+.clangd/
+.cache/
+
 # OS
 .DS_Store
 Thumbs.db
-
-# Virtual environments
-venv/
-env/
-ENV/
+desktop.ini
 
 # pytest
 .pytest_cache/
@@ -78,4 +106,17 @@ markdown_output/
 .dmypy.json
 dmypy.json
 
-include/
+# Test outputs and temporary files
+*.txt
+!requirements.txt
+!CMakeLists.txt
+!README.txt
+out_*.txt
+test_output/
+
+# Third-party (if using git submodules, this might need adjustment)
+# third_party/
+# Uncomment above if you want to ignore third_party entirely
+
+# Package manager locks (keep uv.lock for reproducibility)
+# uv.lock
