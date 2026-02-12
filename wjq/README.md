@@ -63,22 +63,22 @@ wjq --color-mode 256 data.json
 
 ```bash
 # Extract a field
-wjq -f ".name" data.json
+wjq ".name" data.json
 
-# Access nested properties
-wjq -f ".nested.key" data.json
+# Access nested properties  
+wjq ".nested.key" data.json
 
 # Array indexing
-wjq -f ".items[0]" data.json
+wjq ".items[0]" data.json
 
 # Array iteration
-wjq -f ".items[]" data.json
+wjq ".items[]" data.json
 
 # Pipe operations
-wjq -f ".items | length" data.json
+wjq ".items | length" data.json
 
 # Complex queries
-echo '{"users":[{"name":"Alice"},{"name":"Bob"}]}' | wjq -f ".users[].name"
+echo '{"users":[{"name":"Alice"},{"name":"Bob"}]}' | wjq ".users[].name"
 ```
 
 ### Advanced Options
@@ -115,8 +115,11 @@ wjq --format-numbers financial_data.json
 | `--format-numbers` | Add thousand separators to numbers |
 | `--themes` | List all available themes |
 | `-h, --help` | Show help |
-| `-f, --filter QUERY` | Apply jq-compatible query filter |
 | `-v, --version` | Show version |
+
+**Positional Arguments:**
+- `[filter]` - jq-compatible query filter (default: `.` for identity)
+- `[file]` - JSON file to process (reads from stdin if omitted)
 
 ## Color Themes
 
