@@ -1,0 +1,5 @@
+{"id": 1, "type": "user", "name": "Alice", "active": true}
+{"id": 2, "type": "user", "name": "Bob", "active": false}
+{"id": 3, "type": "user", "name": "Charlie", "active": true}
+{"id": 4, "type": "user", "name": "Diana", "active": true}
+{"id": 5, "type": "user", "name": "Eve", "active": false}

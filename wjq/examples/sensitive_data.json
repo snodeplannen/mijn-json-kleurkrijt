@@ -1,0 +1,16 @@
+{
+  "user": {
+    "id": 12345,
+    "username": "john_doe",
+    "email": "john@example.com",
+    "password": "super_secret_password_123",
+    "api_key": "sk-abc123xyz789",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "secret": "my_top_secret"
+  },
+  "settings": {
+    "theme": "dark",
+    "notifications": true,
+    "password": "another_password_here"
+  }
+}

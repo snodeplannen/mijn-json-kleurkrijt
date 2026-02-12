@@ -1,6 +1,8 @@
 #pragma once
+#include "callbacks.hpp"
 #include "json_parser.hpp"
 #include "style.hpp"
+#include "themes.hpp"
 #include <iomanip>
 #include <simdjson.h>
 #include <sstream>
@@ -13,7 +15,9 @@ private:
   const Style &style;
   std::stringstream output;
   int indent_level = 0;
-  std::string current_path; // Voor tracking van geneste keys
+  StyleContext current_context;
+  const CallbackRegistry *callbacks_ = nullptr;
+
   static constexpr const char *RESET = "\033[0m";
 
   void increaseIndent() { indent_level++; }
@@ -35,38 +39,27 @@ private:
     output << color.toAnsi(style.color_mode) << value << RESET;
   }
 
-  void printString(const std::string &s) {
-    std::stringstream escaped;
+  void emit_event(JsonEventType type, const std::string &key = "",
+                  const std::string &string_val = "", double num_val = 0,
+                  bool bool_val = false) {
+    if (!callbacks_)
+      return;
 
-    for (char c : s) {
-      if (c == '"')
-        escaped << "\\\"";
-      else if (c == '\\')
-        escaped << "\\\\";
-      else if (c == '\b')
-        escaped << "\\b";
-      else if (c == '\f')
-        escaped << "\\f";
-      else if (c == '\n')
-        escaped << "\\n";
-      else if (c == '\r')
-        escaped << "\\r";
-      else if (c == '\t')
-        escaped << "\\t";
-      else if (static_cast<unsigned char>(c) < 0x20) {
-        escaped << "\\u00" << std::hex << std::setfill('0') << std::setw(2)
-                << static_cast<int>(static_cast<unsigned char>(c)) << std::dec;
-      } else
-        escaped << c;
-    }
+    JsonEvent event;
+    event.type = type;
+    event.path = current_context.path;
+    event.key = key;
+    event.string_value = string_val;
+    event.number_value = num_val;
+    event.bool_value = bool_val;
+    event.depth = current_context.depth;
+    event.array_index = current_context.array_index;
+    event.context = current_context;
 
-    // Print quotes apart van de string content
-    addColored(style.string_quote_color, "\"");
-    addColored(style.string_color, escaped.str());
-    addColored(style.string_quote_color, "\"");
+    callbacks_->invoke_element_callbacks(event);
   }
 
-  void printKey(const std::string &s, const std::string &path = "") {
+  std::string escape_string(const std::string &s) {
     std::stringstream escaped;
 
     for (char c : s) {
@@ -91,142 +84,281 @@ private:
         escaped << c;
     }
 
-    // Check voor individuele key kleur
-    Color key_col = style.key_color;
-    Color quote_col = style.key_quote_color;
-    if (!style.key_colors.empty()) {
-      // Check exacte key match
-      auto it = style.key_colors.find(s);
-      if (it != style.key_colors.end()) {
-        key_col = it->second;
-      } else if (!path.empty()) {
-        // Check path-based match (bijv. "user.name")
-        auto path_it = style.key_colors.find(path);
-        if (path_it != style.key_colors.end()) {
-          key_col = path_it->second;
-        }
+    return escaped.str();
+  }
+
+  void printString(const std::string &s, const StyleContext &ctx) {
+    Color str_color = style.get_color(ElementType::String, ctx, s);
+    Color quote_color = style.get_quote_color(ElementType::String);
+
+    // Apply callbacks if any
+    std::string display_value = s;
+    if (callbacks_) {
+      JsonEvent event;
+      event.type = JsonEventType::StringValue;
+      event.path = ctx.path;
+      event.string_value = s;
+      event.depth = ctx.depth;
+      event.context = ctx;
+
+      auto result = callbacks_->invoke_element_callbacks(event);
+      if (result.skip_element)
+        return;
+      if (result.replace_value) {
+        display_value = result.replacement_text;
+      }
+      if (result.custom_color) {
+        str_color = result.color;
+      }
+
+      // Apply value transforms
+      display_value = callbacks_->invoke_value_transforms(display_value, ctx);
+    }
+
+    std::string escaped = escape_string(display_value);
+
+    addColored(quote_color, "\"");
+    addColored(str_color, escaped);
+    addColored(quote_color, "\"");
+  }
+
+  void printKey(const std::string &s, const StyleContext &ctx) {
+    Color key_col = style.get_color(ElementType::Key, ctx, s);
+    Color quote_col = style.get_quote_color(ElementType::Key);
+
+    // Apply callbacks
+    if (callbacks_) {
+      JsonEvent event;
+      event.type = JsonEventType::Key;
+      event.path = ctx.path;
+      event.key = s;
+      event.depth = ctx.depth;
+      event.context = ctx;
+
+      auto result = callbacks_->invoke_element_callbacks(event);
+      if (result.skip_element)
+        return;
+      if (result.custom_color) {
+        key_col = result.color;
       }
     }
 
-    // Print quotes apart van de key content
+    std::string escaped = escape_string(s);
+
     addColored(quote_col, "\"");
-    addColored(key_col, escaped.str());
+    addColored(key_col, escaped);
     addColored(quote_col, "\"");
   }
 
+  void printNumber(const std::string &num_str, const StyleContext &ctx) {
+    Color num_color = style.get_color(ElementType::Number, ctx, num_str);
+
+    // Apply callbacks
+    std::string display_value = num_str;
+    if (callbacks_) {
+      JsonEvent event;
+      event.type = JsonEventType::NumberValue;
+      event.path = ctx.path;
+      try {
+        event.number_value = std::stod(num_str);
+      } catch (...) {
+        event.number_value = 0;
+      }
+      event.depth = ctx.depth;
+      event.context = ctx;
+
+      auto result = callbacks_->invoke_element_callbacks(event);
+      if (result.skip_element)
+        return;
+      if (result.custom_color) {
+        num_color = result.color;
+      }
+
+      display_value = callbacks_->invoke_value_transforms(display_value, ctx);
+    }
+
+    addColored(num_color, display_value);
+  }
+
+  void printBoolean(bool b, const StyleContext &ctx) {
+    Color bool_col = style.get_color(ElementType::Boolean, ctx, b ? "true" : "false");
+    std::string bool_str = b ? "true" : "false";
+
+    // Apply callbacks
+    if (callbacks_) {
+      JsonEvent event;
+      event.type = JsonEventType::BooleanValue;
+      event.path = ctx.path;
+      event.bool_value = b;
+      event.depth = ctx.depth;
+      event.context = ctx;
+
+      auto result = callbacks_->invoke_element_callbacks(event);
+      if (result.skip_element)
+        return;
+      if (result.custom_color) {
+        bool_col = result.color;
+      }
+    }
+
+    addColored(bool_col, bool_str);
+  }
+
+  void printNull(const StyleContext &ctx) {
+    Color null_col = style.get_color(ElementType::Null, ctx, "null");
+
+    // Apply callbacks
+    if (callbacks_) {
+      JsonEvent event;
+      event.type = JsonEventType::NullValue;
+      event.path = ctx.path;
+      event.depth = ctx.depth;
+      event.context = ctx;
+
+      auto result = callbacks_->invoke_element_callbacks(event);
+      if (result.skip_element)
+        return;
+      if (result.custom_color) {
+        null_col = result.color;
+      }
+    }
+
+    addColored(null_col, "null");
+  }
+
 public:
-  explicit Printer(const Style &s) : style(s) {}
+  explicit Printer(const Style &s, const CallbackRegistry *callbacks = nullptr)
+      : style(s), callbacks_(callbacks) {}
 
   std::string str() const { return output.str(); }
+
   void clear() {
     output.str("");
     output.clear();
     indent_level = 0;
-    current_path = "";
+    current_context = StyleContext{};
   }
 
-  // JSON string versies (werken met simdjson::ondemand::value)
-  void printDictJson(ondemand::object obj,
-                     const std::string &parent_path = "") {
-    addColored(style.brace_color, "{");
+  void setCallbacks(const CallbackRegistry *callbacks) { callbacks_ = callbacks; }
+
+  void printDictJson(ondemand::object obj, const StyleContext &parent_ctx = {}) {
+    current_context = parent_ctx;
+    emit_event(JsonEventType::BeginObject);
+
+    Color brace_col = style.get_color(ElementType::Brace, current_context);
+    addColored(brace_col, "{");
     increaseIndent();
 
     bool first = true;
     bool empty = true;
+
     for (auto field : obj) {
       empty = false;
+
+      // Get key
+      std::string_view key_view = field.unescaped_key();
+      std::string key_str(key_view);
+
+      // Create child context
+      StyleContext child_ctx = parent_ctx.enter_object(key_str);
+
       if (!first) {
-        addColored(style.comma_color, ",");
+        Color comma_col = style.get_color(ElementType::Comma, child_ctx);
+        addColored(comma_col, ",");
       }
       addNewline();
       addIndent();
 
-      // Key (altijd string in JSON objects)
-      std::string_view key_view = field.unescaped_key();
-      std::string key_str(key_view);
-      std::string current_key_path =
-          parent_path.empty() ? key_str : parent_path + "." + key_str;
+      // Print key
+      printKey(key_str, child_ctx);
 
-      printKey(key_str, current_key_path);
-
-      addColored(style.colon_color, ":");
+      // Colon
+      Color colon_col = style.get_color(ElementType::Colon, child_ctx);
+      addColored(colon_col, ":");
       if (!style.compact)
         output << " ";
 
-      // Value
+      // Get and print value
       ondemand::value val;
       auto val_error = field.value().get(val);
       if (val_error) {
         throw std::runtime_error("Failed to get field value");
       }
-      printValueJson(val, current_key_path);
+
+      printValueJson(val, child_ctx);
       first = false;
     }
 
     if (empty) {
       decreaseIndent();
-      addColored(style.brace_color, "}");
+      addColored(brace_col, "}");
+      emit_event(JsonEventType::EndObject);
       return;
     }
 
     decreaseIndent();
     addNewline();
     addIndent();
-    addColored(style.brace_color, "}");
+    addColored(brace_col, "}");
+    emit_event(JsonEventType::EndObject);
   }
 
-  void printListJson(ondemand::array arr, const std::string &parent_path = "") {
-    addColored(style.bracket_color, "[");
+  void printListJson(ondemand::array arr, const StyleContext &parent_ctx = {}) {
+    current_context = parent_ctx;
+    emit_event(JsonEventType::BeginArray);
+
+    Color bracket_col = style.get_color(ElementType::Bracket, current_context);
+    addColored(bracket_col, "[");
     increaseIndent();
 
     bool first = true;
     bool empty = true;
     int index = 0;
+
+    // Count array elements for context
+    // Note: simdjson ondemand doesn't give us length easily, so we estimate
+    int estimated_length = -1;
+
     for (auto element : arr) {
       empty = false;
+
+      // Create child context with array index
+      StyleContext child_ctx = parent_ctx.enter_array(index, estimated_length);
+
       if (!first) {
-        addColored(style.comma_color, ",");
+        Color comma_col = style.get_color(ElementType::Comma, child_ctx);
+        addColored(comma_col, ",");
       }
       addNewline();
       addIndent();
 
-      std::string item_path =
-          parent_path.empty() ? ""
-                              : parent_path + "[" + std::to_string(index) + "]";
       ondemand::value val;
       auto val_error = element.get(val);
       if (val_error) {
         throw std::runtime_error("Failed to get array element");
       }
-      printValueJson(val, item_path);
+
+      printValueJson(val, child_ctx);
       first = false;
       index++;
     }
 
     if (empty) {
       decreaseIndent();
-      addColored(style.bracket_color, "]");
+      addColored(bracket_col, "]");
+      emit_event(JsonEventType::EndArray);
       return;
     }
 
     decreaseIndent();
     addNewline();
     addIndent();
-    addColored(style.bracket_color, "]");
+    addColored(bracket_col, "]");
+    emit_event(JsonEventType::EndArray);
   }
 
-  void printValueJson(ondemand::value val, const std::string &path = "") {
-    // Check voor individuele value kleur op basis van path
-    Color value_color;
-    bool has_custom_color = false;
-
-    if (!style.value_colors.empty() && !path.empty()) {
-      auto it = style.value_colors.find(path);
-      if (it != style.value_colors.end()) {
-        value_color = it->second;
-        has_custom_color = true;
-      }
-    }
+  void printValueJson(ondemand::value val, const StyleContext &ctx) {
+    current_context = ctx;
 
     ondemand::json_type type;
     auto type_error = val.type().get(type);
@@ -241,37 +373,7 @@ public:
       if (str_error) {
         throw std::runtime_error("Failed to get string value");
       }
-      std::string str_val(str_view);
-      if (has_custom_color) {
-        std::stringstream escaped;
-        for (char c : str_val) {
-          if (c == '"')
-            escaped << "\\\"";
-          else if (c == '\\')
-            escaped << "\\\\";
-          else if (c == '\b')
-            escaped << "\\b";
-          else if (c == '\f')
-            escaped << "\\f";
-          else if (c == '\n')
-            escaped << "\\n";
-          else if (c == '\r')
-            escaped << "\\r";
-          else if (c == '\t')
-            escaped << "\\t";
-          else if (static_cast<unsigned char>(c) < 0x20) {
-            escaped << "\\u00" << std::hex << std::setfill('0') << std::setw(2)
-                    << static_cast<int>(static_cast<unsigned char>(c))
-                    << std::dec;
-          } else
-            escaped << c;
-        }
-        addColored(style.string_quote_color, "\"");
-        addColored(value_color, escaped.str());
-        addColored(style.string_quote_color, "\"");
-      } else {
-        printString(str_val);
-      }
+      printString(std::string(str_view), ctx);
       break;
     }
     case ondemand::json_type::object: {
@@ -280,7 +382,7 @@ public:
       if (obj_error) {
         throw std::runtime_error("Failed to get object");
       }
-      printDictJson(obj, path);
+      printDictJson(obj, ctx);
       break;
     }
     case ondemand::json_type::array: {
@@ -289,17 +391,12 @@ public:
       if (arr_error) {
         throw std::runtime_error("Failed to get array");
       }
-      printListJson(arr, path);
+      printListJson(arr, ctx);
       break;
     }
     case ondemand::json_type::number: {
       std::string_view num_view = val.raw_json_token();
-      std::string num_str(num_view);
-      if (has_custom_color) {
-        addColored(value_color, num_str);
-      } else {
-        addColored(style.number_color, num_str);
-      }
+      printNumber(std::string(num_view), ctx);
       break;
     }
     case ondemand::json_type::boolean: {
@@ -308,38 +405,26 @@ public:
       if (bool_error) {
         throw std::runtime_error("Failed to get boolean");
       }
-      std::string bool_str = b ? "true" : "false";
-      if (has_custom_color) {
-        addColored(value_color, bool_str);
-      } else {
-        addColored(style.bool_color, bool_str);
-      }
+      printBoolean(b, ctx);
       break;
     }
     case ondemand::json_type::null: {
-      if (has_custom_color) {
-        addColored(value_color, "null");
-      } else {
-        addColored(style.null_color, "null");
-      }
+      printNull(ctx);
       break;
     }
     default:
-      // Handle unknown or unsupported JSON types
       throw std::runtime_error("Unknown or unsupported JSON type");
     }
   }
 
   std::string printFromJson(const std::string &json_str) {
-    output.str("");
-    output.clear();
-    indent_level = 0;
-    current_path = "";
+    clear();
 
     try {
       JsonParser parser;
       simdjson::padded_string padded_json(json_str);
       auto doc = parser.parse(padded_json);
+
       ondemand::value val;
       auto val_error = doc.get_value().get(val);
       if (val_error) {
@@ -352,31 +437,79 @@ public:
         throw std::runtime_error("Failed to get JSON type");
       }
 
+      StyleContext root_ctx;
+      root_ctx.path = "";
+      root_ctx.depth = 0;
+      root_ctx.parent_type = StyleContext::ParentType::Root;
+
+      emit_event(JsonEventType::BeginDocument);
+
       if (type == ondemand::json_type::object) {
         ondemand::object obj;
         auto obj_error = val.get_object().get(obj);
         if (obj_error) {
           throw std::runtime_error("Failed to get object");
         }
-        printDictJson(obj, "");
+        printDictJson(obj, root_ctx);
       } else if (type == ondemand::json_type::array) {
         ondemand::array arr;
         auto arr_error = val.get_array().get(arr);
         if (arr_error) {
           throw std::runtime_error("Failed to get array");
         }
-        printListJson(arr, "");
+        printListJson(arr, root_ctx);
       } else {
-        printValueJson(val, "");
+        printValueJson(val, root_ctx);
       }
+
+      emit_event(JsonEventType::EndDocument);
+
     } catch (const simdjson_error &e) {
       throw std::runtime_error("JSON parsing error: " + std::string(e.what()));
     } catch (const std::exception &e) {
-      throw std::runtime_error("JSON processing error: " +
-                               std::string(e.what()));
+      throw std::runtime_error("JSON processing error: " + std::string(e.what()));
     }
 
     return output.str();
+  }
+
+  // Print from simdjson document directly
+  void printDocument(ondemand::document &doc, const StyleContext &ctx = {}) {
+    current_context = ctx;
+
+    ondemand::value val;
+    auto val_error = doc.get_value().get(val);
+    if (val_error) {
+      throw std::runtime_error("Failed to get document value");
+    }
+
+    ondemand::json_type type;
+    auto error = val.type().get(type);
+    if (error) {
+      throw std::runtime_error("Failed to get JSON type");
+    }
+
+    emit_event(JsonEventType::BeginDocument);
+
+    if (type == ondemand::json_type::object) {
+      ondemand::object obj;
+      auto obj_error = val.get_object().get(obj);
+      if (obj_error) {
+        throw std::runtime_error("Failed to get object");
+      }
+      printDictJson(obj, ctx);
+    } else if (type == ondemand::json_type::array) {
+      ondemand::array arr;
+      auto arr_error = val.get_array().get(arr);
+      if (arr_error) {
+        throw std::runtime_error("Failed to get array");
+      }
+      printListJson(arr, ctx);
+    } else {
+      printValueJson(val, ctx);
+    }
+
+    emit_event(JsonEventType::EndDocument);
   }
 };
 

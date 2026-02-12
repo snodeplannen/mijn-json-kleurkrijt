@@ -1,3 +1,9 @@
+#include "callbacks.hpp"
+#include "json_parser.hpp"
+#include "printer.hpp"
+#include "streaming_parser.hpp"
+#include "style.hpp"
+#include "themes.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -5,11 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "json_parser.hpp"
-#include "printer.hpp"
-#include "style.hpp"
-
-// Windows-specific headers voor console kleuren
+// Windows-specific headers for console colors
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -38,32 +40,63 @@ struct CommandLineOptions {
   int indent_size = 2;
   bool show_help = false;
   bool show_version = false;
+  bool show_themes = false;
+  bool streaming = false;   // Use streaming parser for large files
+  bool line_by_line = false; // Parse JSONL line by line
+  bool hide_sensitive = false; // Hide sensitive fields
+  size_t truncate_strings = 0; // Truncate strings longer than this
+  bool format_numbers = false; // Add thousand separators
 };
 
 void printUsage(const char *programName) {
-  std::cerr << "Gebruik: " << programName << " [opties] [filter] [bestand]\n\n";
-  std::cerr << "Opties:\n";
-  std::cerr << "  -t, --theme THEMA      Kies kleurenschema (default, dracula, "
-               "solarized, monokai, github, minimal, neon)\n";
-  std::cerr << "  -m, --color-mode MODE  Kleurmodus: auto, 16, 256, truecolor, "
-               "disabled\n";
-  std::cerr << "  -c, --compact          Compacte output (geen extra "
-               "spaties/nieuwe regels)\n";
-  std::cerr << "  -i, --indent N         Indentatiegrootte (standaard: 2)\n";
-  std::cerr << "  -h, --help             Toon deze help\n";
-  std::cerr << "  -v, --version          Toon versie\n\n";
+  std::cerr << "Usage: " << programName << " [options] [filter] [file]\n\n";
+  std::cerr << "Options:\n";
+  std::cerr << "  -t, --theme THEME      Choose color scheme:\n";
+  std::cerr << "                         default, dracula, solarized, monokai,\n";
+  std::cerr << "                         github, minimal, neon, ocean, forest,\n";
+  std::cerr << "                         cyberpunk, sunset, high-contrast,\n";
+  std::cerr << "                         debug, depth-aware, data-analysis\n";
+  std::cerr << "  -m, --color-mode MODE  Color mode: auto, 16, 256, truecolor, disabled\n";
+  std::cerr << "  -c, --compact          Compact output (minimal whitespace)\n";
+  std::cerr << "  -i, --indent N         Indent size (1-8, default: 2)\n";
+  std::cerr << "  -s, --streaming        Use streaming parser for large files\n";
+  std::cerr << "  -l, --line-by-line     Parse JSONL line by line (memory efficient)\n";
+  std::cerr << "  --hide-sensitive       Hide sensitive fields (passwords, tokens)\n";
+  std::cerr << "  --truncate N           Truncate strings longer than N chars\n";
+  std::cerr << "  --format-numbers       Add thousand separators to numbers\n";
+  std::cerr << "  --themes               List all available themes\n";
+  std::cerr << "  -h, --help             Show this help\n";
+  std::cerr << "  -v, --version          Show version\n\n";
   std::cerr << "Filters:\n";
-  std::cerr
-      << "  .                      Toon het hele JSON document (standaard)\n\n";
-  std::cerr << "Voorbeelden:\n";
+  std::cerr << "  .                      Show entire document (default)\n\n";
+  std::cerr << "Examples:\n";
   std::cerr << "  " << programName << " data.json\n";
   std::cerr << "  " << programName << " -t monokai data.json\n";
-  std::cerr << "  " << programName << " -c -i 4 data.json\n";
-  std::cerr << "  cat data.json | " << programName
-            << " -t neon --color-mode 256\n";
+  std::cerr << "  " << programName << " -t debug -c data.json\n";
+  std::cerr << "  " << programName << " -s large-file.json\n";
+  std::cerr << "  " << programName << " -t data-analysis --format-numbers data.json\n";
+  std::cerr << "  cat data.json | " << programName << " -t depth-aware\n";
 }
 
-void printVersion() { std::cout << "wjq 1.0.0 - Windows JSON Query Tool\n"; }
+void printVersion() {
+  std::cout << "wjq 2.0.0 - Windows JSON Query Tool\n";
+  std::cout << "Enhanced with conditional styling, streaming, and callbacks\n";
+}
+
+void printThemes() {
+  std::cout << "Available themes:\n\n";
+  auto themes = colored_json::Style::listPresets();
+
+  std::cout << "Basic themes:\n";
+  for (const auto &t : themes) {
+    std::cout << "  - " << t << "\n";
+  }
+
+  std::cout << "\nSpecial themes:\n";
+  std::cout << "  - debug         Highlights errors, warnings, and anomalies\n";
+  std::cout << "  - depth-aware   Colors based on nesting depth\n";
+  std::cout << "  - data-analysis Highlights array patterns (first/last/even/odd)\n";
+}
 
 CommandLineOptions parseArguments(int argc, char *argv[]) {
   CommandLineOptions opts;
@@ -78,17 +111,20 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
     } else if (arg == "-v" || arg == "--version") {
       opts.show_version = true;
       return opts;
+    } else if (arg == "--themes") {
+      opts.show_themes = true;
+      return opts;
     } else if (arg == "-t" || arg == "--theme") {
       if (i + 1 < argc) {
         opts.theme = argv[++i];
       } else {
-        throw std::runtime_error("THEMA ontbreekt na " + arg);
+        throw std::runtime_error("THEME missing after " + arg);
       }
     } else if (arg == "-m" || arg == "--color-mode") {
       if (i + 1 < argc) {
         opts.color_mode_str = argv[++i];
       } else {
-        throw std::runtime_error("MODE ontbreekt na " + arg);
+        throw std::runtime_error("MODE missing after " + arg);
       }
     } else if (arg == "-c" || arg == "--compact") {
       opts.compact = true;
@@ -96,21 +132,34 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
       if (i + 1 < argc) {
         opts.indent_size = std::stoi(argv[++i]);
         if (opts.indent_size < 1 || opts.indent_size > 8) {
-          throw std::runtime_error("Indent moet tussen 1 en 8 liggen");
+          throw std::runtime_error("Indent must be between 1 and 8");
         }
       } else {
-        throw std::runtime_error("N ontbreekt na " + arg);
+        throw std::runtime_error("N missing after " + arg);
       }
+    } else if (arg == "-s" || arg == "--streaming") {
+      opts.streaming = true;
+    } else if (arg == "-l" || arg == "--line-by-line") {
+      opts.line_by_line = true;
+    } else if (arg == "--hide-sensitive") {
+      opts.hide_sensitive = true;
+    } else if (arg == "--truncate") {
+      if (i + 1 < argc) {
+        opts.truncate_strings = std::stoul(argv[++i]);
+      } else {
+        throw std::runtime_error("N missing after " + arg);
+      }
+    } else if (arg == "--format-numbers") {
+      opts.format_numbers = true;
     } else if (arg.size() > 0 && arg[0] == '-' && arg != "-") {
-      throw std::runtime_error("Onbekende optie: " + arg);
+      throw std::runtime_error("Unknown option: " + arg);
     } else {
       positional.push_back(arg);
     }
   }
 
-  // Verwerk positionele argumenten: [filter] [bestand]
+  // Process positional arguments: [filter] [file]
   if (positional.size() == 1) {
-    // Als het begint met . is het waarschijnlijk een filter
     if (positional[0][0] == '.') {
       opts.filter = positional[0];
     } else {
@@ -126,16 +175,13 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
 
 std::string readInput(const std::string &filename) {
   if (filename.empty() || filename == "-") {
-    // Controleer of stdin iets te bieden heeft
-    // Op Windows is dit lastiger zonder te blocken, maar voor een CLI tool is
-    // blocken ok
     std::stringstream buffer;
     buffer << std::cin.rdbuf();
     return buffer.str();
   } else {
     std::ifstream file(filename);
     if (!file.is_open()) {
-      throw std::runtime_error("Kan bestand niet openen: " + filename);
+      throw std::runtime_error("Cannot open file: " + filename);
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -144,18 +190,122 @@ std::string readInput(const std::string &filename) {
 }
 
 colored_json::ColorMode parseColorMode(const std::string &mode) {
-  static const std::unordered_map<std::string, colored_json::ColorMode>
-      modeMap = {{"auto", colored_json::ColorMode::Auto},
-                 {"16", colored_json::ColorMode::Ansi16},
-                 {"256", colored_json::ColorMode::Ansi256},
-                 {"truecolor", colored_json::ColorMode::TrueColor},
-                 {"disabled", colored_json::ColorMode::Disabled}};
+  static const std::unordered_map<std::string, colored_json::ColorMode> modeMap = {
+      {"auto", colored_json::ColorMode::Auto},
+      {"16", colored_json::ColorMode::Ansi16},
+      {"256", colored_json::ColorMode::Ansi256},
+      {"truecolor", colored_json::ColorMode::TrueColor},
+      {"disabled", colored_json::ColorMode::Disabled}};
 
   auto it = modeMap.find(mode);
   if (it != modeMap.end()) {
     return it->second;
   }
-  throw std::runtime_error("Ongeldige kleurmodus: " + mode);
+  throw std::runtime_error("Invalid color mode: " + mode);
+}
+
+// Setup callbacks based on options
+colored_json::CallbackRegistry setupCallbacks(const CommandLineOptions &opts) {
+  using namespace colored_json;
+  CallbackRegistry callbacks;
+
+  if (opts.hide_sensitive) {
+    callbacks.on_key("password*", callbacks::hide_sensitive("***"));
+    callbacks.on_key("token*", callbacks::hide_sensitive("***"));
+    callbacks.on_key("secret*", callbacks::hide_sensitive("***"));
+    callbacks.on_key("api_key", callbacks::hide_sensitive("***"));
+    callbacks.on_key("*password", callbacks::hide_sensitive("***"));
+    callbacks.on_key("*token", callbacks::hide_sensitive("***"));
+  }
+
+  if (opts.truncate_strings > 0) {
+    callbacks.on_value_transform(
+        callbacks::truncate_strings(opts.truncate_strings));
+  }
+
+  if (opts.format_numbers) {
+    callbacks.on_value_transform(callbacks::format_numbers());
+  }
+
+  return callbacks;
+}
+
+// Process JSON using streaming parser
+int processStreaming(const std::string &filename,
+                     const CommandLineOptions &opts,
+                     const colored_json::CallbackRegistry &callbacks) {
+  using namespace colored_json;
+
+  Style style = Style::getPreset(opts.theme);
+  style.color_mode = parseColorMode(opts.color_mode_str);
+  style.compact = opts.compact;
+  style.indent_size = opts.indent_size;
+
+  StreamingPrinter printer(style, callbacks.has_callbacks() ? &callbacks : nullptr);
+  bool success;
+
+  if (filename.empty() || filename == "-") {
+    success = printer.process_stream(std::cin, std::cout);
+  } else {
+    success = printer.process_file(filename, std::cout);
+  }
+
+  if (!success) {
+    std::cerr << "Error: " << printer.last_error() << "\n";
+    return 1;
+  }
+
+  return 0;
+}
+
+// Process JSON using regular parser (for smaller files)
+int processRegular(const std::string &input,
+                   const CommandLineOptions &opts,
+                   const colored_json::CallbackRegistry &callbacks) {
+  using namespace colored_json;
+
+  if (input.empty()) {
+    std::cerr << "No JSON input received (stdin was empty or file is empty)\n";
+    return 1;
+  }
+
+  // Configure style
+  Style style = Style::getPreset(opts.theme);
+  style.color_mode = parseColorMode(opts.color_mode_str);
+  style.compact = opts.compact;
+  style.indent_size = opts.indent_size;
+
+  // Create printer with callbacks
+  Printer printer(style, callbacks.has_callbacks() ? &callbacks : nullptr);
+
+  // Use padded_string to ensure lifetime
+  simdjson::padded_string padded_json(input);
+
+  // Execute filter (support iterate_many for JSONL)
+  JsonParser parser;
+  auto stream = parser.parseMany(padded_json);
+
+  bool first_doc = true;
+  for (auto doc_res : stream) {
+    if (!first_doc)
+      std::cout << "\n";
+    first_doc = false;
+
+    auto doc = doc_res.value();
+
+    if (opts.filter == ".") {
+      printer.clear();
+      printer.printDocument(doc);
+      std::cout << printer.str();
+    } else {
+      std::cerr << "Unsupported filter: " << opts.filter << "\n";
+      std::cerr << "Supported filters: .\n";
+      return 1;
+    }
+  }
+
+  std::cout << "\n";
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -173,87 +323,28 @@ int main(int argc, char *argv[]) {
       return 0;
     }
 
+    if (opts.show_themes) {
+      printThemes();
+      return 0;
+    }
+
     // Enable Windows ANSI support
     enableWindowsAnsiSupport();
 
-    // Read JSON input
-    std::string json_str = readInput(opts.filename);
-    if (json_str.empty()) {
-      std::cerr
-          << "Geen JSON input ontvangen (stdin was leeg of bestand is leeg)\n";
-      return 1;
+    // Setup callbacks
+    colored_json::CallbackRegistry callbacks = setupCallbacks(opts);
+
+    // Process based on mode
+    if (opts.streaming || opts.line_by_line) {
+      return processStreaming(opts.filename, opts, callbacks);
+    } else {
+      // Read all input for regular mode
+      std::string json_str = readInput(opts.filename);
+      return processRegular(json_str, opts, callbacks);
     }
-
-    // Configure style
-    colored_json::Style style = colored_json::Style::getPreset(opts.theme);
-    style.color_mode = parseColorMode(opts.color_mode_str);
-    style.compact = opts.compact;
-    style.indent_size = opts.indent_size;
-
-    // Create printer
-    colored_json::Printer printer(style);
-
-    // Use padded_string to ensure lifetime
-    simdjson::padded_string padded_json(json_str);
-
-    // Execute filter (nu ondersteunen we iterate_many voor JSONL)
-    colored_json::JsonParser parser;
-    auto stream = parser.parseMany(padded_json);
-
-    bool first_doc = true;
-    for (auto doc_res : stream) {
-      if (!first_doc)
-        std::cout << "\n";
-      first_doc = false;
-
-      auto doc = doc_res.value();
-
-      if (opts.filter == ".") {
-        simdjson::ondemand::value val;
-        auto val_error = doc.get_value().get(val);
-        if (val_error) {
-          throw std::runtime_error("Kan root value niet ophalen");
-        }
-
-        simdjson::ondemand::json_type type;
-        auto type_error = val.type().get(type);
-        if (type_error) {
-          throw std::runtime_error("Kan JSON type niet bepalen");
-        }
-
-        // Print based on type
-        if (type == simdjson::ondemand::json_type::object) {
-          simdjson::ondemand::object obj;
-          auto obj_error = val.get_object().get(obj);
-          if (obj_error) {
-            throw std::runtime_error("Kan object niet ophalen");
-          }
-          printer.printDictJson(obj, "");
-        } else if (type == simdjson::ondemand::json_type::array) {
-          simdjson::ondemand::array arr;
-          auto arr_error = val.get_array().get(arr);
-          if (arr_error) {
-            throw std::runtime_error("Kan array niet ophalen");
-          }
-          printer.printListJson(arr, "");
-        } else {
-          printer.printValueJson(val, "");
-        }
-
-        std::cout << printer.str();
-        printer.clear();
-      } else {
-        std::cerr << "Niet-ondersteunde filter: " << opts.filter << "\n";
-        std::cerr << "Ondersteunde filters: .\n";
-        return 1;
-      }
-    }
-
-    std::cout << "\n";
-    return 0;
 
   } catch (const std::exception &e) {
-    std::cerr << "Fout: " << e.what() << "\n";
+    std::cerr << "Error: " << e.what() << "\n";
     return 1;
   }
 }

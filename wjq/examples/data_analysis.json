@@ -1,0 +1,16 @@
+{
+  "dataset": "monthly_sales",
+  "values": [100, 150, 200, 180, 220, 250, 300, 280, 320, 350, 400, 450],
+  "metadata": {
+    "first_month": "January",
+    "last_month": "December",
+    "total": 3200,
+    "average": 266.67
+  },
+  "quarters": [
+    [100, 150, 200],
+    [180, 220, 250],
+    [300, 280, 320],
+    [350, 400, 450]
+  ]
+}

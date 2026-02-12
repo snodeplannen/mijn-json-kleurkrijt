@@ -1,0 +1,12 @@
+{
+  "name": "wjq-examples",
+  "version": "2.0.0",
+  "description": "Example JSON files demonstrating wjq features",
+  "active": true,
+  "count": 42,
+  "nested": {
+    "key": "value",
+    "number": 123.456,
+    "boolean": false
+  }
+}

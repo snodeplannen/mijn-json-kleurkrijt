@@ -1,0 +1,25 @@
+{
+  "level0": {
+    "name": "root",
+    "level1": {
+      "name": "first",
+      "level2": {
+        "name": "second",
+        "level3": {
+          "name": "third",
+          "level4": {
+            "name": "fourth",
+            "level5": {
+              "name": "fifth",
+              "data": {
+                "value1": 1,
+                "value2": 2,
+                "value3": 3
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

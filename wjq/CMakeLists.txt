@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(wjq VERSION 1.0.0 LANGUAGES CXX)
+project(wjq VERSION 2.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,10 +18,7 @@ endif()
 # Main executable
 add_executable(wjq 
     src/main.cpp
-    src/printer.hpp
-    src/style.hpp
-    src/color.hpp
-    src/json_parser.hpp
+    src/matchers.cpp
 )
 
 target_include_directories(wjq PRIVATE src)
@@ -30,9 +27,33 @@ target_link_libraries(wjq PRIVATE simdjson)
 # Platform-specific
 if(WIN32)
     target_compile_definitions(wjq PRIVATE _WIN32_WINNT=0x0601)
-    # Linked required windows libs if any (prompt suggested shlwapi)
     target_link_libraries(wjq PRIVATE shlwapi)
+endif()
+
+# Enable all warnings
+if(MSVC)
+    target_compile_options(wjq PRIVATE /W4)
+else()
+    target_compile_options(wjq PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Tests
+enable_testing()
+option(BUILD_TESTS "Build tests" ON)
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
 endif()
 
 # Installation
 install(TARGETS wjq DESTINATION bin)
+
+# Examples
+option(BUILD_EXAMPLES "Build examples" ON)
+if(BUILD_EXAMPLES)
+    # Just copy example files
+    file(GLOB EXAMPLE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.json")
+    if(EXAMPLE_FILES)
+        install(FILES ${EXAMPLE_FILES} DESTINATION share/wjq/examples)
+    endif()
+endif()

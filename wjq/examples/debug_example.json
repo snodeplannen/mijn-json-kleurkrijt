@@ -1,0 +1,28 @@
+{
+  "status": "warning",
+  "message": "This is a warning message",
+  "results": {
+    "success": true,
+    "error": null,
+    "warning_count": 5,
+    "failed_items": 0
+  },
+  "errors": [
+    {
+      "level": "error",
+      "message": "Connection failed",
+      "code": 500
+    },
+    {
+      "level": "warning",
+      "message": "Deprecated API used",
+      "code": 301
+    }
+  ],
+  "metrics": {
+    "success_rate": 95.5,
+    "error_rate": -2.5,
+    "large_value": 999999,
+    "small_value": -1000
+  }
+}
