@@ -1,6 +1,7 @@
 #include "callbacks.hpp"
 #include "json_parser.hpp"
 #include "printer.hpp"
+#include "query.hpp"
 #include "streaming_parser.hpp"
 #include "style.hpp"
 #include "themes.hpp"
@@ -55,7 +56,9 @@ void printUsage(const char *programName) {
   std::cerr << "                         default, dracula, solarized, monokai,\n";
   std::cerr << "                         github, minimal, neon, ocean, forest,\n";
   std::cerr << "                         cyberpunk, sunset, high-contrast,\n";
-  std::cerr << "                         debug, depth-aware, data-analysis\n";
+  std::cerr << "                         debug, depth-aware, data-analysis,\n";
+  std::cerr << "                         white, nord, gruvbox, one-dark,\n";
+  std::cerr << "                         catppuccin, ice, coffee\n";
   std::cerr << "  -m, --color-mode MODE  Color mode: auto, 16, 256, truecolor, disabled\n";
   std::cerr << "  -c, --compact          Compact output (minimal whitespace)\n";
   std::cerr << "  -i, --indent N         Indent size (1-8, default: 2)\n";
@@ -67,11 +70,33 @@ void printUsage(const char *programName) {
   std::cerr << "  --themes               List all available themes\n";
   std::cerr << "  -h, --help             Show this help\n";
   std::cerr << "  -v, --version          Show version\n\n";
-  std::cerr << "Filters:\n";
-  std::cerr << "  .                      Show entire document (default)\n\n";
+  std::cerr << "Filters (jq-style):\n";
+  std::cerr << "  .                      Show entire document (default)\n";
+  std::cerr << "  .key                   Get property 'key'\n";
+  std::cerr << "  .key.nested            Get nested property\n";
+  std::cerr << "  .users[]               Iterate array 'users'\n";
+  std::cerr << "  .users[].name          Get 'name' from each user\n";
+  std::cerr << "  .items[0]              Get first item\n";
+  std::cerr << "  .items[-1]             Get last item\n";
+  std::cerr << "  .items[0:5]            Get first 5 items\n";
+  std::cerr << "  ..name                 Recursive descent for 'name'\n";
+  std::cerr << "  keys                   Get object keys\n";
+  std::cerr << "  values                 Get object values\n";
+  std::cerr << "  length                 Get length of array/string/object\n";
+  std::cerr << "  sort                   Sort array\n";
+  std::cerr << "  reverse                Reverse array\n";
+  std::cerr << "  unique                 Get unique values\n";
+  std::cerr << "  map(expr)              Map expression over array\n";
+  std::cerr << "  select(condition)      Filter array elements\n";
+  std::cerr << "  .items | length        Pipe: get length of items\n";
+  std::cerr << "  .users | map(.name)    Get all user names\n";
+  std::cerr << "  .users | select(.age > 18)  Filter users by age\n\n";
   std::cerr << "Examples:\n";
   std::cerr << "  " << programName << " data.json\n";
   std::cerr << "  " << programName << " -t monokai data.json\n";
+  std::cerr << "  " << programName << " '.users[].name' data.json\n";
+  std::cerr << "  " << programName << " '.items | length' data.json\n";
+  std::cerr << "  " << programName << " '.users | select(.active)' data.json\n";
   std::cerr << "  " << programName << " -t debug -c data.json\n";
   std::cerr << "  " << programName << " -s large-file.json\n";
   std::cerr << "  " << programName << " -t data-analysis --format-numbers data.json\n";
@@ -258,11 +283,41 @@ int processStreaming(const std::string &filename,
   return 0;
 }
 
+// Execute jq-style query filter
+int executeQueryFilter(const std::string &input,
+                       const CommandLineOptions &opts,
+                       const colored_json::CallbackRegistry &callbacks) {
+  using namespace colored_json;
+
+  if (input.empty()) {
+    std::cerr << "No JSON input received (stdin was empty or file is empty)\n";
+    return 1;
+  }
+
+  // Execute query
+  std::string result = SimpleQueryEngine::execute(input, opts.filter);
+  if (result.empty()) {
+    std::cerr << "Query error: " << SimpleQueryEngine::lastError() << "\n";
+    return 1;
+  }
+
+  // For now, just print the result as-is
+  // (In a full implementation, we would format with the printer)
+  std::cout << result << "\n";
+
+  return 0;
+}
+
 // Process JSON using regular parser (for smaller files)
 int processRegular(const std::string &input,
                    const CommandLineOptions &opts,
                    const colored_json::CallbackRegistry &callbacks) {
   using namespace colored_json;
+
+  // If filter is not just ".", use query engine
+  if (opts.filter != ".") {
+    return executeQueryFilter(input, opts, callbacks);
+  }
 
   if (input.empty()) {
     std::cerr << "No JSON input received (stdin was empty or file is empty)\n";
@@ -293,15 +348,9 @@ int processRegular(const std::string &input,
 
     auto doc = doc_res.value();
 
-    if (opts.filter == ".") {
-      printer.clear();
-      printer.printDocument(doc);
-      std::cout << printer.str();
-    } else {
-      std::cerr << "Unsupported filter: " << opts.filter << "\n";
-      std::cerr << "Supported filters: .\n";
-      return 1;
-    }
+    printer.clear();
+    printer.printDocument(doc);
+    std::cout << printer.str();
   }
 
   std::cout << "\n";
