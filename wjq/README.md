@@ -1,12 +1,12 @@
 # wjq - Windows JSON Query Tool
 
-A powerful, colored JSON processor for Windows with extensive command-line options, advanced styling capabilities, streaming support, and a flexible callback system.
+A powerful, colored JSON processor for Windows with jq-compatible query syntax, extensive command-line options, advanced styling capabilities, streaming support, and a flexible callback system.
 
 ## Features
 
+- **🔍 jq-Compatible Queries** - Extract and filter JSON using familiar jq syntax
 - **🎨 15+ Color Themes** - Including advanced themes like `debug`, `depth-aware`, and `data-analysis`
-- **🔍 Conditional Styling** - Style based on value content, regex patterns, numeric ranges, and JSON paths
-- **📊 Position-based Styling** - Style array elements by index (first, last, even, odd, every N)
+- **📊 Conditional Styling** - Style based on value content, regex patterns, numeric ranges, and JSON paths
 - **🌊 Streaming Parser** - Handle extremely large JSON/JSONL files efficiently
 - **🔄 Callback System** - Customize behavior with hooks for filtering, transformation, and color overrides
 - **🔒 Security Features** - Hide sensitive fields like passwords and API keys
@@ -59,6 +59,28 @@ wjq -i 4 data.json
 wjq --color-mode 256 data.json
 ```
 
+### Query Filters (jq-compatible)
+
+```bash
+# Extract a field
+wjq -f ".name" data.json
+
+# Access nested properties
+wjq -f ".nested.key" data.json
+
+# Array indexing
+wjq -f ".items[0]" data.json
+
+# Array iteration
+wjq -f ".items[]" data.json
+
+# Pipe operations
+wjq -f ".items | length" data.json
+
+# Complex queries
+echo '{"users":[{"name":"Alice"},{"name":"Bob"}]}' | wjq -f ".users[].name"
+```
+
 ### Advanced Options
 
 ```bash
@@ -93,6 +115,7 @@ wjq --format-numbers financial_data.json
 | `--format-numbers` | Add thousand separators to numbers |
 | `--themes` | List all available themes |
 | `-h, --help` | Show help |
+| `-f, --filter QUERY` | Apply jq-compatible query filter |
 | `-v, --version` | Show version |
 
 ## Color Themes
@@ -299,8 +322,27 @@ src/
 ├── printer.hpp         # JSON output formatting
 ├── json_parser.hpp     # simdjson wrapper
 ├── streaming_parser.hpp # Streaming JSON processing
+├── query_engine.hpp    # Query AST and execution engine
+├── query_parser.cpp    # jq syntax parser
+├── query_executor.cpp  # Query execution implementation
 └── main.cpp            # CLI entry point
 ```
+
+### Query Engine
+
+The query engine implements a subset of jq syntax:
+
+| Feature | Syntax | Example |
+|---------|--------|---------|
+| Identity | `.` | `wjq -f "." data.json` |
+| Property access | `.key` | `wjq -f ".name" data.json` |
+| Bracket notation | `.["key"]` | `wjq -f ".[\"foo\"]"` |
+| Array index | `.[0]` | `wjq -f ".items[0]"` |
+| Array slice | `.[1:3]` | `wjq -f ".items[1:3]"` |
+| Iterator | `.[]` | `wjq -f ".items[]"` |
+| Recursive descent | `..` | `wjq -f "..` |
+| Pipe | `\|` | `wjq -f ".items \| length"` |
+| Built-in functions | `keys`, `length` | `wjq -f ". \| keys"` |
 
 ## License
 
@@ -312,5 +354,6 @@ Contributions welcome! Areas of interest:
 - Additional color themes
 - More matcher types
 - Additional callback utilities
+- Query engine enhancements (more jq features)
 - Performance improvements
 - Documentation improvements
