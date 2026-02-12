@@ -3182,7 +3182,7 @@ namespace simdjson {
 SIMDJSON_PUSH_DISABLE_UNUSED_WARNINGS
 
 /** The maximum document size supported by simdjson. */
-constexpr size_t SIMDJSON_MAXSIZE_BYTES = 0xFFFFFFFF;
+constexpr size_t SIMDJSON_MAXSIZE_BYTES = 0xFFFFFFFFFF;
 
 /**
  * The amount of padding needed in a buffer to parse JSON.
