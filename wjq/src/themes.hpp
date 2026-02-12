@@ -75,14 +75,16 @@ inline Style make_github_theme() {
 inline Style make_minimal_theme() {
   Style s;
   s.key_color = Color::fromRgb(200, 200, 200);
-  s.string_color = Color::fromRgb(200, 200, 200);
-  s.number_color = Color::fromRgb(200, 200, 200);
-  s.bool_color = Color::fromRgb(200, 200, 200);
-  s.null_color = Color::fromRgb(100, 100, 100);
-  s.brace_color = Color::fromRgb(150, 150, 150);
-  s.bracket_color = Color::fromRgb(150, 150, 150);
+  s.string_color = Color::fromRgb(255, 255, 255);  // White strings
+  s.number_color = Color::fromRgb(255, 255, 255);  // White numbers
+  s.bool_color = Color::fromRgb(255, 255, 255);    // White booleans
+  s.null_color = Color::fromRgb(128, 128, 128);
+  s.brace_color = Color::fromRgb(180, 180, 180);
+  s.bracket_color = Color::fromRgb(180, 180, 180);
+  s.colon_color = Color::fromRgb(150, 150, 150);
+  s.comma_color = Color::fromRgb(150, 150, 150);
   s.key_quote_color = Color::fromRgb(150, 150, 150);
-  s.string_quote_color = Color::fromRgb(150, 150, 150);
+  s.string_quote_color = Color::fromRgb(180, 180, 180);
   return s;
 }
 
@@ -326,6 +328,126 @@ inline Style make_data_analysis_theme() {
   return s;
 }
 
+// New themes with WHITE strings
+
+inline Style make_white_theme() {
+  Style s;
+  s.key_color = Color{100, 170, 255};      // Light blue keys
+  s.string_color = Color{255, 255, 255};   // WHITE strings
+  s.number_color = Color{255, 200, 100};   // Orange numbers
+  s.bool_color = Color{255, 100, 200};     // Pink booleans
+  s.null_color = Color{128, 128, 128};     // Gray null
+  s.brace_color = Color{200, 200, 200};    // Light gray braces
+  s.bracket_color = Color{200, 200, 200};
+  s.colon_color = Color{150, 150, 150};
+  s.comma_color = Color{150, 150, 150};
+  s.key_quote_color = Color{100, 170, 255};
+  s.string_quote_color = Color{255, 255, 255};
+  return s;
+}
+
+inline Style make_nord_theme() {
+  // Nord-inspired theme with white strings
+  Style s;
+  s.key_color = Color{129, 161, 193};      // Nord blue
+  s.string_color = Color{236, 239, 244};   // Snow storm (white-ish)
+  s.number_color = Color{180, 142, 173};   // Nord purple
+  s.bool_color = Color{163, 190, 140};     // Nord green
+  s.null_color = Color{76, 86, 106};       // Dark gray
+  s.brace_color = Color{216, 222, 233};    // Light gray
+  s.bracket_color = Color{216, 222, 233};
+  s.colon_color = Color{143, 188, 187};    // Nord teal
+  s.comma_color = Color{143, 188, 187};
+  s.key_quote_color = Color{129, 161, 193};
+  s.string_quote_color = Color{236, 239, 244};
+  return s;
+}
+
+inline Style make_gruvbox_theme() {
+  // Gruvbox-inspired theme with cream/white strings
+  Style s;
+  s.key_color = Color{131, 165, 152};      // Aqua
+  s.string_color = Color{251, 241, 199};   // Cream/white
+  s.number_color = Color{254, 128, 25};    // Orange
+  s.bool_color = Color{184, 187, 38};      // Yellow-green
+  s.null_color = Color{146, 131, 116};     // Gray
+  s.brace_color = Color{235, 219, 178};    // Light beige
+  s.bracket_color = Color{235, 219, 178};
+  s.colon_color = Color{168, 153, 132};    // Gray-brown
+  s.comma_color = Color{168, 153, 132};
+  s.key_quote_color = Color{131, 165, 152};
+  s.string_quote_color = Color{251, 241, 199};
+  return s;
+}
+
+inline Style make_one_dark_theme() {
+  // One Dark-inspired theme with white strings
+  Style s;
+  s.key_color = Color{86, 156, 214};       // Blue
+  s.string_color = Color{206, 210, 205};   // White/smoke
+  s.number_color = Color{181, 206, 168};   // Green
+  s.bool_color = Color{197, 134, 192};     // Purple
+  s.null_color = Color{100, 100, 100};     // Gray
+  s.brace_color = Color{220, 220, 220};    // Light gray
+  s.bracket_color = Color{220, 220, 220};
+  s.colon_color = Color{150, 150, 150};
+  s.comma_color = Color{150, 150, 150};
+  s.key_quote_color = Color{86, 156, 214};
+  s.string_quote_color = Color{206, 210, 205};
+  return s;
+}
+
+inline Style make_catppuccin_theme() {
+  // Catppuccin-inspired theme with white strings
+  Style s;
+  s.key_color = Color{140, 170, 238};      // Lavender
+  s.string_color = Color{205, 214, 244};   // Text (white)
+  s.number_color = Color{250, 179, 135};   // Peach
+  s.bool_color = Color{166, 218, 149};     // Green
+  s.null_color = Color{108, 112, 134};     // Surface 2
+  s.brace_color = Color{180, 190, 254};    // Lavender light
+  s.bracket_color = Color{180, 190, 254};
+  s.colon_color = Color{147, 153, 178};    // Overlay 0
+  s.comma_color = Color{147, 153, 178};
+  s.key_quote_color = Color{140, 170, 238};
+  s.string_quote_color = Color{205, 214, 244};
+  return s;
+}
+
+inline Style make_ice_theme() {
+  // Ice/cold theme with white strings
+  Style s;
+  s.key_color = Color{100, 149, 237};      // Cornflower blue
+  s.string_color = Color{255, 255, 255};   // WHITE
+  s.number_color = Color{173, 216, 230};   // Light blue
+  s.bool_color = Color{224, 255, 255};     // Cyan/white
+  s.null_color = Color{112, 128, 144};     // Slate gray
+  s.brace_color = Color{176, 196, 222};    // Light steel blue
+  s.bracket_color = Color{176, 196, 222};
+  s.colon_color = Color{135, 206, 250};    // Light sky blue
+  s.comma_color = Color{135, 206, 250};
+  s.key_quote_color = Color{100, 149, 237};
+  s.string_quote_color = Color{255, 255, 255};
+  return s;
+}
+
+inline Style make_coffee_theme() {
+  // Coffee/warm theme with cream strings
+  Style s;
+  s.key_color = Color{205, 133, 63};       // Peru/coffee
+  s.string_color = Color{255, 248, 220};   // Cornsilk (cream white)
+  s.number_color = Color{222, 184, 135};   // Burlywood
+  s.bool_color = Color{210, 180, 140};     // Tan
+  s.null_color = Color{139, 119, 101};     // Dark brown gray
+  s.brace_color = Color{245, 222, 179};    // Wheat
+  s.bracket_color = Color{245, 222, 179};
+  s.colon_color = Color{188, 143, 143};    // Rosy brown
+  s.comma_color = Color{188, 143, 143};
+  s.key_quote_color = Color{205, 133, 63};
+  s.string_quote_color = Color{255, 248, 220};
+  return s;
+}
+
 // Preset loader implementation
 inline Style Style::getPreset(const std::string &name) {
   if (name == "default" || name == "dracula")
@@ -356,6 +478,21 @@ inline Style Style::getPreset(const std::string &name) {
     return make_depth_aware_theme();
   if (name == "data-analysis")
     return make_data_analysis_theme();
+  // New white-string themes
+  if (name == "white")
+    return make_white_theme();
+  if (name == "nord")
+    return make_nord_theme();
+  if (name == "gruvbox")
+    return make_gruvbox_theme();
+  if (name == "one-dark")
+    return make_one_dark_theme();
+  if (name == "catppuccin")
+    return make_catppuccin_theme();
+  if (name == "ice")
+    return make_ice_theme();
+  if (name == "coffee")
+    return make_coffee_theme();
 
   throw std::runtime_error("Unknown preset: " + name);
 }
@@ -364,7 +501,9 @@ inline std::vector<std::string> Style::listPresets() {
   return {"default",    "dracula",      "solarized",    "monokai",
           "github",     "minimal",      "neon",         "ocean",
           "forest",     "cyberpunk",    "sunset",       "high-contrast",
-          "debug",      "depth-aware",  "data-analysis"};
+          "debug",      "depth-aware",  "data-analysis",
+          "white",      "nord",         "gruvbox",      "one-dark",
+          "catppuccin", "ice",          "coffee"};
 }
 
 } // namespace colored_json

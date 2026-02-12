@@ -119,6 +119,19 @@ wjq --format-numbers financial_data.json
 | `sunset` | Warm orange/pink gradient |
 | `high-contrast` | Maximum contrast for accessibility |
 
+### White String Themes (Voor de anti-groenen 😄)
+
+| Theme | Description |
+|-------|-------------|
+| `white` | Clean white strings with blue keys |
+| `nord` | Arctic North-inspired, snow storm whites |
+| `gruvbox` | Retro cream/beige strings |
+| `one-dark` | VSCode-style white strings |
+| `catppuccin` | Soft pastel white strings |
+| `ice` | Cold blue whites |
+| `coffee` | Warm cream whites |
+| `minimal` | Subtle white/light gray strings |
+
 ### Advanced Themes
 
 | Theme | Description |
