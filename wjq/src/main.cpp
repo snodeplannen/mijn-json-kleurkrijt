@@ -1,5 +1,6 @@
 #include "callbacks.hpp"
 #include "json_parser.hpp"
+#include "jsonpath.hpp"
 #include "printer.hpp"
 #include "query.hpp"
 #include "streaming_parser.hpp"
@@ -91,6 +92,12 @@ void printUsage(const char *programName) {
   std::cerr << "  .items | length        Pipe: get length of items\n";
   std::cerr << "  .users | map(.name)    Get all user names\n";
   std::cerr << "  .users | select(.age > 18)  Filter users by age\n\n";
+  std::cerr << "JSONPath (XPath-style):\n";
+  std::cerr << "  $.store.book[0]        Get first book\n";
+  std::cerr << "  $..book               Get all books recursively\n";
+  std::cerr << "  $..book[?(@.price<10)] Filter books by price\n";
+  std::cerr << "  $.store.*             Get all store properties\n";
+  std::cerr << "  $..author             Get all authors recursively\n\n";
   std::cerr << "Examples:\n";
   std::cerr << "  " << programName << " data.json\n";
   std::cerr << "  " << programName << " -t monokai data.json\n";
@@ -184,8 +191,9 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
   }
 
   // Process positional arguments: [filter] [file]
+  // Filter starts with '.' (jq-style) or '$' (JSONPath)
   if (positional.size() == 1) {
-    if (positional[0][0] == '.') {
+    if (positional[0][0] == '.' || positional[0][0] == '$') {
       opts.filter = positional[0];
     } else {
       opts.filename = positional[0];
@@ -283,7 +291,7 @@ int processStreaming(const std::string &filename,
   return 0;
 }
 
-// Execute jq-style query filter
+// Execute jq-style or JSONPath query filter
 int executeQueryFilter(const std::string &input,
                        const CommandLineOptions &opts,
                        const colored_json::CallbackRegistry &callbacks) {
@@ -294,17 +302,26 @@ int executeQueryFilter(const std::string &input,
     return 1;
   }
 
-  // Execute query
-  std::string result = SimpleQueryEngine::execute(input, opts.filter);
-  if (result.empty()) {
-    std::cerr << "Query error: " << SimpleQueryEngine::lastError() << "\n";
+  // Check if this is a JSONPath query (starts with $)
+  if (JsonQuery::is_jsonpath(opts.filter)) {
+    // Execute JSONPath query
+    std::string result = JsonQuery::execute(input, opts.filter);
+    if (!JsonQuery::get_error().empty()) {
+      std::cerr << "JSONPath error: " << JsonQuery::get_error() << "\n";
+      return 1;
+    }
+    std::cout << result << "\n";
+    return 0;
+  }
+
+  // Execute jq-style query
+  std::string result = JsonQuery::execute(input, opts.filter);
+  if (!JsonQuery::get_error().empty()) {
+    std::cerr << "Query error: " << JsonQuery::get_error() << "\n";
     return 1;
   }
 
-  // For now, just print the result as-is
-  // (In a full implementation, we would format with the printer)
   std::cout << result << "\n";
-
   return 0;
 }
 

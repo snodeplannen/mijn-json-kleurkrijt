@@ -19,6 +19,11 @@ endif()
 add_executable(wjq 
     src/main.cpp
     src/matchers.cpp
+    src/query_engine.cpp
+    src/query_parser.cpp
+    src/query_executor.cpp
+    src/jsonpath_parser.cpp
+    src/jsonpath_executor.cpp
 )
 
 target_include_directories(wjq PRIVATE src)

@@ -179,7 +179,7 @@ enum class QueryOpType {
 // Query operator node
 struct QueryOp {
   QueryOpType type;
-  std::string property;                        // For Property
+  std::string prop_name;                        // For Property
   int64_t index = 0;                           // For Index
   int64_t sliceStart = 0, sliceEnd = 0;        // For slice [start:end]
   bool isSlice = false;                        // Whether this is a slice
@@ -192,17 +192,17 @@ struct QueryOp {
   static std::unique_ptr<QueryOp> identity() {
     return std::make_unique<QueryOp>(QueryOpType::Identity);
   }
-  static std::unique_ptr<QueryOp> property(const std::string &prop) {
+  static std::unique_ptr<QueryOp> make_property(const std::string &prop) {
     auto op = std::make_unique<QueryOp>(QueryOpType::Property);
-    op->property = prop;
+    op->prop_name = prop;
     return op;
   }
-  static std::unique_ptr<QueryOp> index(int64_t idx) {
+  static std::unique_ptr<QueryOp> make_index(int64_t idx) {
     auto op = std::make_unique<QueryOp>(QueryOpType::Index);
     op->index = idx;
     return op;
   }
-  static std::unique_ptr<QueryOp> slice(int64_t start, int64_t end) {
+  static std::unique_ptr<QueryOp> make_slice(int64_t start, int64_t end) {
     auto op = std::make_unique<QueryOp>(QueryOpType::Index);
     op->isSlice = true;
     op->sliceStart = start;

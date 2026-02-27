@@ -23,7 +23,7 @@ QueryValue QueryEngine::executeOp(const QueryOp &op, const QueryValue &input) {
     return input;
 
   case QueryOpType::Property:
-    return evaluateProperty(input, op.property);
+    return evaluateProperty(input, op.prop_name);
 
   case QueryOpType::Index:
     if (op.isSlice) {

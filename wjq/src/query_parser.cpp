@@ -277,7 +277,7 @@ private:
               return nullptr;
             }
             
-            expr = QueryOp::pipe(std::move(expr), QueryOp::slice(start, end));
+            expr = QueryOp::pipe(std::move(expr), QueryOp::make_slice(start, end));
           } else {
             auto indexExpr = parse_expr();
             if (!consume_ch(']')) {
@@ -353,7 +353,7 @@ private:
         return QueryOp::function(funcType, std::move(args));
       }
       
-      return QueryOp::property(ident);
+      return QueryOp::make_property(ident);
     }
     
     return parse_literal_val();
@@ -364,7 +364,7 @@ private:
     
     if (match_str("\"")) {
       std::string name = parse_string_lit();
-      return QueryOp::property(name);
+      return QueryOp::make_property(name);
     }
     
     if (match_str("[")) {
@@ -373,7 +373,7 @@ private:
         error_msg_ = "Expected ']'";
         return nullptr;
       }
-      return QueryOp::property(name);
+      return QueryOp::make_property(name);
     }
     
     std::string ident = parse_ident_name();
@@ -388,7 +388,7 @@ private:
     if (ident == "unique") return QueryOp::function(QueryOpType::Unique, {});
     if (ident == "reverse") return QueryOp::function(QueryOpType::Reverse, {});
     
-    return QueryOp::property(ident);
+    return QueryOp::make_property(ident);
   }
 
   std::unique_ptr<QueryOp> parse_literal_val() {
