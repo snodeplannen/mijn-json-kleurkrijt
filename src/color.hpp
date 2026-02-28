@@ -1,6 +1,7 @@
 #pragma once
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
+#include <windows.h>
 #endif
 #include <cstdint>
 #include <cstdlib>
@@ -115,7 +116,25 @@ inline std::string Color::toAnsi(ColorMode mode) const {
     } else if (term && std::string(term).find("256") != std::string::npos) {
       mode = ColorMode::Ansi256;
     } else {
+#ifdef _WIN32
+      // On Windows, if we don't have TERM/COLORTERM, check if stdout is a
+      // console
+      HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+      if (hOut != INVALID_HANDLE_VALUE && GetFileType(hOut) == FILE_TYPE_CHAR) {
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hOut, &dwMode)) {
+          // If it's a console, default to at least ANSI16
+          mode = ColorMode::Ansi16;
+        } else {
+          mode = ColorMode::Disabled;
+        }
+      } else {
+        // Not a console (might be a pipe or file), disable colors by default
+        mode = ColorMode::Disabled;
+      }
+#else
       mode = ColorMode::Ansi16;
+#endif
     }
   }
 

@@ -178,7 +178,19 @@ wjq -t dracula -m 256 data.json
 
 # Streaming voor grote bestanden
 wjq -S large-file.json
+
+# Realtime streaming uit een pipe
+trufflehog filesystem /pad/naar/files --json | wjq
 ```
+
+---
+
+## Realtime Streaming
+
+`wjq` is geoptimaliseerd voor realtime weergave van JSON streams. Wanneer de output van een ander programma (zoals `trufflehog`, `docker logs`, of een custom script) naar `wjq` wordt gepiped:
+- Wordt elk JSON document **direct** geprocessed en weergegeven.
+- Blijven de **kleuren behouden**, zelfs op Windows waar TTY-detectie normaal gesproken lastig is in pipes.
+- Wordt de output geflusht voor minimale latency.
 
 ---
 

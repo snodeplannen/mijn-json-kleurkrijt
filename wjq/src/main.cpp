@@ -494,7 +494,7 @@ int processRegular(const std::string &input, const CommandLineOptions &opts,
 
     printer.clear();
     printer.printDocument(doc);
-    std::cout << printer.str();
+    std::cout << printer.str() << std::flush;
   }
 
   std::cout << "\n";
@@ -523,6 +523,29 @@ int main(int argc, char *argv[]) {
 
     // Enable Windows ANSI support
     enableWindowsAnsiSupport();
+
+    // Detect if stdin is a pipe/redirect
+    bool is_stdin_pipe = false;
+#ifdef _WIN32
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    if (hIn != INVALID_HANDLE_VALUE) {
+      DWORD type = GetFileType(hIn);
+      if (type == FILE_TYPE_PIPE) {
+        is_stdin_pipe = true;
+      }
+    }
+#else
+    if (!isatty(STDIN_FILENO)) {
+      is_stdin_pipe = true;
+    }
+#endif
+
+    // If reading from stdin and it's a pipe, default to streaming unless slurp
+    // is on
+    if ((opts.filename.empty() || opts.filename == "-") && is_stdin_pipe &&
+        !opts.slurp) {
+      opts.streaming = true;
+    }
 
     // Setup callbacks
     colored_json::CallbackRegistry callbacks = setupCallbacks(opts);

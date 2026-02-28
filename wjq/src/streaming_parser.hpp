@@ -89,20 +89,25 @@ public:
     return process_padded_string(json, output);
   }
 
-  // Process stream (loads whole stream into memory)
+  // Process stream line-by-line for realtime output
   bool process_stream(std::istream &input, std::ostream &output = std::cout) {
-    std::stringstream buffer;
-    buffer << input.rdbuf();
-    std::string data = buffer.str();
+    std::string line;
+    bool first = true;
+    while (std::getline(input, line)) {
+      if (line.find_first_not_of(" \t\r\n") == std::string::npos)
+        continue;
 
-    // An empty stream contains only whitespace, fast return
-    if (data.find_first_not_of(" \t\r\n") == std::string::npos) {
-      stats_ = Stats{};
-      return true;
+      if (!first)
+        output << "\n";
+      first = false;
+
+      if (!print_line(line, output)) {
+        return false;
+      }
+      output << std::flush;
+      stats_.documents_parsed++;
     }
-
-    simdjson::padded_string json(data);
-    return process_padded_string(json, output);
+    return true;
   }
 
   // Print a single json string

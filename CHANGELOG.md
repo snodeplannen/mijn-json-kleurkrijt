@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-02-28
+### Fixed
+- **Windows Console**: Improved TTY detection on Windows to preserve color output when piped (e.g., from `trufflehog`).
+- **Realtime Streaming**: Refactored streaming parser to process line-by-line and flush output immediately, enabling realtime feedback in pipes.
+- **CLI Defaults**: Streaming mode is now automatically enabled when `stdin` is a pipe on Windows.
+
 ## [0.8.8] - 2026-02-28
-### Added
-- Static image gallery for color themes to ensure GitHub compatibility.
-- Automated screenshot generation tool for documentation.
 
 ## [0.8.7] - 2026-02-28
 ### Added
