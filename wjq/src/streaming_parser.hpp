@@ -12,7 +12,6 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-#include <sstream>
 #include <string>
 
 namespace colored_json {
@@ -89,23 +88,43 @@ public:
     return process_padded_string(json, output);
   }
 
-  // Process stream line-by-line for realtime output
+  // Process stream line-by-line (or multi-line) for realtime output
   bool process_stream(std::istream &input, std::ostream &output = std::cout) {
     std::string line;
+    std::string buffer;
     bool first = true;
+    simdjson::ondemand::parser parser;
+
     while (std::getline(input, line)) {
-      if (line.find_first_not_of(" \t\r\n") == std::string::npos)
+      if (line.empty() && buffer.empty())
         continue;
 
-      if (!first)
-        output << "\n";
-      first = false;
+      buffer += line;
+      buffer += "\n";
 
-      if (!print_line(line, output)) {
-        return false;
+      // Try to parse the current buffer
+      try {
+        simdjson::padded_string padded(buffer);
+        simdjson::ondemand::document doc;
+        auto error = parser.iterate(padded).get(doc);
+
+        if (!error) {
+          // Success! We found a complete document (or at least one)
+          if (!first)
+            output << "\n";
+          first = false;
+
+          Printer printer(style_, callbacks_);
+          printer.printDocument(doc);
+          output << printer.str() << std::flush;
+
+          buffer.clear();
+          stats_.documents_parsed++;
+        }
+        // If error, it might be incomplete, so we keep accumulating lines
+      } catch (...) {
+        // Ignore parsing errors during accumulation
       }
-      output << std::flush;
-      stats_.documents_parsed++;
     }
     return true;
   }
