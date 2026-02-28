@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Value-Dependent Styling**: Full architecture port of `StyleRule` and `Matcher` engine from `wjq` into the core library
+  - `StyleContext` for rule-based color matching on JSON values
+  - Boolean coloring: `true` renders green, `false` renders red across all themes
+  - `KeywordMatcher`, `RegexMatcher`, `RangeMatcher` for flexible value matching
+  - Python bindings for `StyleRule` and `Matcher` API
+- **Query Engine Enhancements** (jq parity):
+  - Object construction: `{name: .first, age: .years}`
+  - Array construction: `[.a, .b, .c]`
+  - String interpolation: `"User \(.name) is \(.age) years old"`
+  - Mutation operators: `.name = "x"`, `.age |= . + 1`
+  - Regex functions: `test("pattern")`, `match("pattern")`, `sub("old", "new")`
+  - Try/catch/optional: `try .x`, `.x?`, `try .x catch "fallback"`
+  - Variable bindings: `.name as $n | {user: $n}`, with proper scoping/shadowing
+- **CLI Features**:
+  - `--raw-output` / `-r`: Strip JSON quotes from string output
+  - `--slurp` / `-s`: Collect stream of JSON documents into a single array
+  - `--arg name value`: Pass string variables into queries as `$name`
+  - `--argjson name value`: Pass JSON variables into queries as `$name`
+- **Streaming Parser**: Refactored to use `simdjson::iterate_many` for proper multi-line JSON and NDJSON support
+- **Examples**: Python examples with README (`examples/01_basic_usage.py` through `examples/04_html_markdown.py`)
+
+### Changed
+- **CLI Flag Rename**: `-s` is now `--slurp` (was `--streaming`); streaming moved to `-S`
+- **QueryEngine**: Refactored from static methods to instance-based class for variable state management
+- **Core Library**: Moved `matchers.hpp`, `matchers.cpp`, `style_context.hpp`, `themes.hpp` from `wjq/src/` to `src/`
+- **Positional Argument Detection**: Improved heuristic — single CLI args are treated as filters unless they look like file paths
+
+### Fixed
+- **Keyword Literal Parsing**: `true`, `false`, `null` in expression contexts (e.g., `{active: true}`) were incorrectly parsed as property accesses instead of literal values
+- **Pipe Operator**: Removed dead `match_str("=")` branch that could consume `=` after `|`
+
 - **wjq Tool**: New command-line JSON query tool (`wjq`) for Windows
   - Standalone C++ executable for fast JSON formatting
   - Supports JSONL (JSON Lines) format for multiple documents
