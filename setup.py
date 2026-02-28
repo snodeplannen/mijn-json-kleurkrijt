@@ -23,7 +23,7 @@ ext_modules = [
             ("VERSION_INFO", "1.0.0"),
         ],
         extra_compile_args=[
-            "-O3", "-march=native", "-ffast-math", "-DNDEBUG"
+            "-O3", "-mtune=generic", "-ffast-math", "-DNDEBUG"
         ] if os.name != "nt" else [
             "/O2", "/Ob2", "/GL", "/Gy", "/DNDEBUG"
         ],
