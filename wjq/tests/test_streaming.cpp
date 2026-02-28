@@ -55,6 +55,34 @@ TEST_CASE("StreamingPrinter multi-line document", "[streaming]") {
   REQUIRE(printer.stats().documents_parsed == 1);
 }
 
+TEST_CASE("StreamingPrinter process_stream with tee", "[streaming]") {
+  Style s;
+  s.color_mode = ColorMode::Disabled;
+  s.compact = true;
+
+  StreamingPrinter printer(s);
+
+  std::string jsonl = R"({"name": "test1"}
+{"name": "test2"})";
+  std::istringstream stream(jsonl);
+  std::ostringstream output;
+  std::ostringstream tee_stream;
+
+  bool success = printer.process_stream(stream, output, &tee_stream);
+
+  REQUIRE(success == true);
+  std::string result = output.str();
+  std::string tee_result = tee_stream.str();
+
+  // Output should be formatted
+  REQUIRE(result.find("test1") != std::string::npos);
+  REQUIRE(result.find("test2") != std::string::npos);
+
+  // Tee output should be exactly what was streamed line-by-line
+  REQUIRE(tee_result == "{\"name\": \"test1\"}\n{\"name\": \"test2\"}\n");
+  REQUIRE(printer.stats().documents_parsed == 2);
+}
+
 TEST_CASE("StreamingPrinter invalid JSON", "[streaming]") {
   Style s;
   StreamingPrinter printer(s);

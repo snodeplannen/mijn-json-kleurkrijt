@@ -52,6 +52,7 @@ struct CommandLineOptions {
 
   bool raw_output = false; // -r Output raw strings
   bool slurp = false;      // -s Read stream of objects into array
+  std::string tee_file;    // --tee Output raw input to file
   std::map<std::string, std::string> args;     // string args
   std::map<std::string, std::string> argjsons; // json args
 };
@@ -88,6 +89,8 @@ void printUsage(const char *programName) {
   std::cerr
       << "  --truncate N           Truncate strings longer than N chars\n";
   std::cerr << "  --format-numbers       Add thousand separators to numbers\n";
+  std::cerr
+      << "  --tee FILE             Output raw, uncolored input data to FILE\n";
   std::cerr << "  --themes               List all available themes\n";
   std::cerr << "  -h, --help             Show this help\n";
   std::cerr << "  -v, --version          Show version\n\n";
@@ -223,6 +226,12 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
       }
     } else if (arg == "--format-numbers") {
       opts.format_numbers = true;
+    } else if (arg == "--tee") {
+      if (i + 1 < argc) {
+        opts.tee_file = argv[++i];
+      } else {
+        throw std::runtime_error("FILE missing after " + arg);
+      }
     } else if (arg.size() > 0 && arg[0] == '-' && arg != "-") {
       throw std::runtime_error("Unknown option: " + arg);
     } else {
@@ -259,11 +268,13 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
   return opts;
 }
 
-std::string readInput(const std::string &filename) {
+std::string readInput(const std::string &filename,
+                      const std::string &tee_file = "") {
+  std::string result;
   if (filename.empty() || filename == "-") {
     std::stringstream buffer;
     buffer << std::cin.rdbuf();
-    return buffer.str();
+    result = buffer.str();
   } else {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -271,8 +282,18 @@ std::string readInput(const std::string &filename) {
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
-    return buffer.str();
+    result = buffer.str();
   }
+
+  if (!tee_file.empty()) {
+    std::ofstream tf(tee_file, std::ios::binary);
+    if (!tf) {
+      throw std::runtime_error("Cannot open tee file for writing: " + tee_file);
+    }
+    tf.write(result.data(), result.size());
+  }
+
+  return result;
 }
 
 colored_json::ColorMode parseColorMode(const std::string &mode) {
@@ -331,10 +352,23 @@ int processStreaming(const std::string &filename,
                            callbacks.has_callbacks() ? &callbacks : nullptr);
   bool success;
 
+  std::unique_ptr<std::ofstream> tee_stream;
+  std::ostream *tee_ptr = nullptr;
+  if (!opts.tee_file.empty()) {
+    tee_stream =
+        std::make_unique<std::ofstream>(opts.tee_file, std::ios::binary);
+    if (!*tee_stream) {
+      std::cerr << "Error: Cannot open tee file for writing: " << opts.tee_file
+                << "\n";
+      return 1;
+    }
+    tee_ptr = tee_stream.get();
+  }
+
   if (filename.empty() || filename == "-") {
-    success = printer.process_stream(std::cin, std::cout);
+    success = printer.process_stream(std::cin, std::cout, tee_ptr);
   } else {
-    success = printer.process_file(filename, std::cout);
+    success = printer.process_file(filename, std::cout, tee_ptr);
   }
 
   if (!success) {
@@ -558,7 +592,7 @@ int main(int argc, char *argv[]) {
       return processStreaming(opts.filename, opts, callbacks);
     } else {
       // Read all input for regular mode
-      std::string json_str = readInput(opts.filename);
+      std::string json_str = readInput(opts.filename, opts.tee_file);
 
       // Slurp mode: wrap multiple JSON documents into a single array
       if (opts.slurp) {

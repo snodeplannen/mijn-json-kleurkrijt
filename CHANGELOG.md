@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.9] - 2026-02-28
+### Added
+- **Input Tee Feature**: Added `--tee <file>` option to `wjq` to optionally write raw, uncolored input data (streaming) to a separate file.
+
 ### Fixed
 - **Windows Console**: Improved TTY detection on Windows to preserve color output when piped (e.g., from `trufflehog`).
 - **Realtime Streaming**: Refactored streaming parser to process line-by-line and flush output immediately, enabling realtime feedback in pipes.

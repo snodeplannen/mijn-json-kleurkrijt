@@ -77,7 +77,8 @@ public:
 
   // Process file directly
   bool process_file(const std::string &filename,
-                    std::ostream &output = std::cout) {
+                    std::ostream &output = std::cout,
+                    std::ostream *tee_stream = nullptr) {
     simdjson::padded_string json;
     auto error = simdjson::padded_string::load(filename).get(json);
     if (error) {
@@ -85,17 +86,27 @@ public:
                     simdjson::error_message(error) + ")";
       return false;
     }
+    if (tee_stream) {
+      tee_stream->write(json.data(), json.size());
+      tee_stream->flush();
+    }
     return process_padded_string(json, output);
   }
 
   // Process stream line-by-line (or multi-line) for realtime output
-  bool process_stream(std::istream &input, std::ostream &output = std::cout) {
+  bool process_stream(std::istream &input, std::ostream &output = std::cout,
+                      std::ostream *tee_stream = nullptr) {
     std::string line;
     std::string buffer;
     bool first = true;
     simdjson::ondemand::parser parser;
 
     while (std::getline(input, line)) {
+      if (tee_stream) {
+        *tee_stream << line << "\n";
+        tee_stream->flush();
+      }
+
       if (line.empty() && buffer.empty())
         continue;
 
