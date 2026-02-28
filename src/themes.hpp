@@ -481,6 +481,7 @@ inline Style make_coffee_theme() {
   s.comma_color = Color{188, 143, 143};
   s.key_quote_color = Color{205, 133, 63};
   s.string_quote_color = Color{255, 248, 220};
+  apply_boolean_rules(s);
   return s;
 }
 

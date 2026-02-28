@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-02-28
+### Added
+- Static image gallery for color themes to ensure GitHub compatibility.
+- Automated screenshot generation tool for documentation.
+
 ## [0.8.7] - 2026-02-28
 ### Added
 - Interactive documentation gallery for all 22 color themes in README.md.
