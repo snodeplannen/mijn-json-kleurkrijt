@@ -8,6 +8,7 @@
 #include "themes.hpp"
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -43,30 +44,49 @@ struct CommandLineOptions {
   bool show_help = false;
   bool show_version = false;
   bool show_themes = false;
-  bool streaming = false;   // Use streaming parser for large files
-  bool line_by_line = false; // Parse JSONL line by line
+  bool streaming = false;      // Use streaming parser for large files
+  bool line_by_line = false;   // Parse JSONL line by line
   bool hide_sensitive = false; // Hide sensitive fields
   size_t truncate_strings = 0; // Truncate strings longer than this
   bool format_numbers = false; // Add thousand separators
+
+  bool raw_output = false; // -r Output raw strings
+  bool slurp = false;      // -s Read stream of objects into array
+  std::map<std::string, std::string> args;     // string args
+  std::map<std::string, std::string> argjsons; // json args
 };
 
 void printUsage(const char *programName) {
   std::cerr << "Usage: " << programName << " [options] [filter] [file]\n\n";
   std::cerr << "Options:\n";
   std::cerr << "  -t, --theme THEME      Choose color scheme:\n";
-  std::cerr << "                         default, dracula, solarized, monokai,\n";
-  std::cerr << "                         github, minimal, neon, ocean, forest,\n";
+  std::cerr
+      << "                         default, dracula, solarized, monokai,\n";
+  std::cerr
+      << "                         github, minimal, neon, ocean, forest,\n";
   std::cerr << "                         cyberpunk, sunset, high-contrast,\n";
   std::cerr << "                         debug, depth-aware, data-analysis,\n";
   std::cerr << "                         white, nord, gruvbox, one-dark,\n";
   std::cerr << "                         catppuccin, ice, coffee\n";
-  std::cerr << "  -m, --color-mode MODE  Color mode: auto, 16, 256, truecolor, disabled\n";
+  std::cerr << "  -m, --color-mode MODE  Color mode: auto, 16, 256, truecolor, "
+               "disabled\n";
   std::cerr << "  -c, --compact          Compact output (minimal whitespace)\n";
   std::cerr << "  -i, --indent N         Indent size (1-8, default: 2)\n";
-  std::cerr << "  -s, --streaming        Use streaming parser for large files\n";
-  std::cerr << "  -l, --line-by-line     Parse JSONL line by line (memory efficient)\n";
-  std::cerr << "  --hide-sensitive       Hide sensitive fields (passwords, tokens)\n";
-  std::cerr << "  --truncate N           Truncate strings longer than N chars\n";
+  std::cerr
+      << "  -S, --streaming        Use streaming parser for large files\n";
+  std::cerr << "  -l, --line-by-line     Parse JSONL line by line (memory "
+               "efficient)\n";
+  std::cerr << "  -r, --raw-output       Output raw strings, not JSON texts\n";
+  std::cerr
+      << "  -s, --slurp            Read (slurp) all inputs into an array\n";
+  std::cerr
+      << "  --arg name value       Set variable $name to string <value>\n";
+  std::cerr
+      << "  --argjson name value   Set variable $name to JSON value <value>\n";
+  std::cerr
+      << "  --hide-sensitive       Hide sensitive fields (passwords, tokens)\n";
+  std::cerr
+      << "  --truncate N           Truncate strings longer than N chars\n";
   std::cerr << "  --format-numbers       Add thousand separators to numbers\n";
   std::cerr << "  --themes               List all available themes\n";
   std::cerr << "  -h, --help             Show this help\n";
@@ -105,8 +125,9 @@ void printUsage(const char *programName) {
   std::cerr << "  " << programName << " '.items | length' data.json\n";
   std::cerr << "  " << programName << " '.users | select(.active)' data.json\n";
   std::cerr << "  " << programName << " -t debug -c data.json\n";
-  std::cerr << "  " << programName << " -s large-file.json\n";
-  std::cerr << "  " << programName << " -t data-analysis --format-numbers data.json\n";
+  std::cerr << "  " << programName << " -S large-file.json\n";
+  std::cerr << "  " << programName
+            << " -t data-analysis --format-numbers data.json\n";
   std::cerr << "  cat data.json | " << programName << " -t depth-aware\n";
 }
 
@@ -127,7 +148,8 @@ void printThemes() {
   std::cout << "\nSpecial themes:\n";
   std::cout << "  - debug         Highlights errors, warnings, and anomalies\n";
   std::cout << "  - depth-aware   Colors based on nesting depth\n";
-  std::cout << "  - data-analysis Highlights array patterns (first/last/even/odd)\n";
+  std::cout
+      << "  - data-analysis Highlights array patterns (first/last/even/odd)\n";
 }
 
 CommandLineOptions parseArguments(int argc, char *argv[]) {
@@ -169,8 +191,26 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
       } else {
         throw std::runtime_error("N missing after " + arg);
       }
-    } else if (arg == "-s" || arg == "--streaming") {
+    } else if (arg == "-S" || arg == "--streaming") {
       opts.streaming = true;
+    } else if (arg == "-s" || arg == "--slurp") {
+      opts.slurp = true;
+    } else if (arg == "-r" || arg == "--raw-output") {
+      opts.raw_output = true;
+    } else if (arg == "--arg") {
+      if (i + 2 < argc) {
+        opts.args[argv[i + 1]] = argv[i + 2];
+        i += 2;
+      } else {
+        throw std::runtime_error("VAR and VALUE missing after " + arg);
+      }
+    } else if (arg == "--argjson") {
+      if (i + 2 < argc) {
+        opts.argjsons[argv[i + 1]] = argv[i + 2];
+        i += 2;
+      } else {
+        throw std::runtime_error("VAR and VALUE missing after " + arg);
+      }
     } else if (arg == "-l" || arg == "--line-by-line") {
       opts.line_by_line = true;
     } else if (arg == "--hide-sensitive") {
@@ -191,12 +231,25 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
   }
 
   // Process positional arguments: [filter] [file]
-  // Filter starts with '.' (jq-style) or '$' (JSONPath)
+  // When 2+ args: first is always filter, second is file.
+  // When 1 arg: heuristic - it's a file if it looks like a path
+  //   (contains / or \ or ends with a file extension like .json)
+  //   otherwise it's a filter.
   if (positional.size() == 1) {
-    if (positional[0][0] == '.' || positional[0][0] == '$') {
-      opts.filter = positional[0];
+    const auto &p = positional[0];
+    bool looks_like_file = false;
+    // Check for path separators or common file extensions
+    if (p.find('/') != std::string::npos || p.find('\\') != std::string::npos ||
+        (p.size() > 5 && p.substr(p.size() - 5) == ".json") ||
+        (p.size() > 6 && p.substr(p.size() - 6) == ".jsonl") ||
+        (p.size() > 4 && p.substr(p.size() - 4) == ".txt")) {
+      looks_like_file = true;
+    }
+    // Also: if it starts with . but has a file extension, treat as file
+    if (looks_like_file) {
+      opts.filename = p;
     } else {
-      opts.filename = positional[0];
+      opts.filter = p;
     }
   } else if (positional.size() >= 2) {
     opts.filter = positional[0];
@@ -223,12 +276,12 @@ std::string readInput(const std::string &filename) {
 }
 
 colored_json::ColorMode parseColorMode(const std::string &mode) {
-  static const std::unordered_map<std::string, colored_json::ColorMode> modeMap = {
-      {"auto", colored_json::ColorMode::Auto},
-      {"16", colored_json::ColorMode::Ansi16},
-      {"256", colored_json::ColorMode::Ansi256},
-      {"truecolor", colored_json::ColorMode::TrueColor},
-      {"disabled", colored_json::ColorMode::Disabled}};
+  static const std::unordered_map<std::string, colored_json::ColorMode>
+      modeMap = {{"auto", colored_json::ColorMode::Auto},
+                 {"16", colored_json::ColorMode::Ansi16},
+                 {"256", colored_json::ColorMode::Ansi256},
+                 {"truecolor", colored_json::ColorMode::TrueColor},
+                 {"disabled", colored_json::ColorMode::Disabled}};
 
   auto it = modeMap.find(mode);
   if (it != modeMap.end()) {
@@ -274,7 +327,8 @@ int processStreaming(const std::string &filename,
   style.compact = opts.compact;
   style.indent_size = opts.indent_size;
 
-  StreamingPrinter printer(style, callbacks.has_callbacks() ? &callbacks : nullptr);
+  StreamingPrinter printer(style,
+                           callbacks.has_callbacks() ? &callbacks : nullptr);
   bool success;
 
   if (filename.empty() || filename == "-") {
@@ -291,9 +345,77 @@ int processStreaming(const std::string &filename,
   return 0;
 }
 
+// Build variables map from CLI --arg and --argjson
+std::map<std::string, colored_json::QueryValue>
+buildVarsMap(const CommandLineOptions &opts) {
+  std::map<std::string, colored_json::QueryValue> vars;
+  for (const auto &kv : opts.args) {
+    vars[kv.first] = colored_json::QueryValue(kv.second);
+  }
+  for (const auto &kv : opts.argjsons) {
+    // Parse JSON value - try number, bool, null, otherwise treat as string
+    const std::string &v = kv.second;
+    if (v == "true") {
+      vars[kv.first] = colored_json::QueryValue(true);
+    } else if (v == "false") {
+      vars[kv.first] = colored_json::QueryValue(false);
+    } else if (v == "null") {
+      vars[kv.first] = colored_json::QueryValue::null();
+    } else {
+      try {
+        double d = std::stod(v);
+        vars[kv.first] = colored_json::QueryValue(d);
+      } catch (...) {
+        vars[kv.first] = colored_json::QueryValue(v);
+      }
+    }
+  }
+  return vars;
+}
+
+// Strip surrounding quotes from a JSON string for raw output
+std::string stripJsonQuotes(const std::string &s) {
+  if (s.size() >= 2 && s.front() == '"' && s.back() == '"') {
+    std::string result;
+    // Unescape JSON string
+    for (size_t i = 1; i < s.size() - 1; ++i) {
+      if (s[i] == '\\' && i + 1 < s.size() - 1) {
+        switch (s[i + 1]) {
+        case '"':
+          result += '"';
+          ++i;
+          break;
+        case '\\':
+          result += '\\';
+          ++i;
+          break;
+        case 'n':
+          result += '\n';
+          ++i;
+          break;
+        case 't':
+          result += '\t';
+          ++i;
+          break;
+        case 'r':
+          result += '\r';
+          ++i;
+          break;
+        default:
+          result += s[i];
+          break;
+        }
+      } else {
+        result += s[i];
+      }
+    }
+    return result;
+  }
+  return s;
+}
+
 // Execute jq-style or JSONPath query filter
-int executeQueryFilter(const std::string &input,
-                       const CommandLineOptions &opts,
+int executeQueryFilter(const std::string &input, const CommandLineOptions &opts,
                        const colored_json::CallbackRegistry &callbacks) {
   using namespace colored_json;
 
@@ -302,32 +424,40 @@ int executeQueryFilter(const std::string &input,
     return 1;
   }
 
+  auto vars = buildVarsMap(opts);
+
   // Check if this is a JSONPath query (starts with $)
   if (JsonQuery::is_jsonpath(opts.filter)) {
-    // Execute JSONPath query
-    std::string result = JsonQuery::execute(input, opts.filter);
+    std::string result = JsonQuery::execute(input, opts.filter, vars);
     if (!JsonQuery::get_error().empty()) {
       std::cerr << "JSONPath error: " << JsonQuery::get_error() << "\n";
       return 1;
     }
-    std::cout << result << "\n";
+    if (opts.raw_output) {
+      std::cout << stripJsonQuotes(result) << "\n";
+    } else {
+      std::cout << result << "\n";
+    }
     return 0;
   }
 
   // Execute jq-style query
-  std::string result = JsonQuery::execute(input, opts.filter);
+  std::string result = JsonQuery::execute(input, opts.filter, vars);
   if (!JsonQuery::get_error().empty()) {
     std::cerr << "Query error: " << JsonQuery::get_error() << "\n";
     return 1;
   }
 
-  std::cout << result << "\n";
+  if (opts.raw_output) {
+    std::cout << stripJsonQuotes(result) << "\n";
+  } else {
+    std::cout << result << "\n";
+  }
   return 0;
 }
 
 // Process JSON using regular parser (for smaller files)
-int processRegular(const std::string &input,
-                   const CommandLineOptions &opts,
+int processRegular(const std::string &input, const CommandLineOptions &opts,
                    const colored_json::CallbackRegistry &callbacks) {
   using namespace colored_json;
 
@@ -406,6 +536,28 @@ int main(int argc, char *argv[]) {
     } else {
       // Read all input for regular mode
       std::string json_str = readInput(opts.filename);
+
+      // Slurp mode: wrap multiple JSON documents into a single array
+      if (opts.slurp) {
+        // Simple slurp: wrap entire input in array brackets
+        // This will make iterate_many produce items that we collect
+        simdjson::padded_string padded_json(json_str);
+        colored_json::JsonParser parser;
+        auto stream = parser.parseMany(padded_json);
+
+        std::string slurped = "[";
+        bool first = true;
+        for (auto doc_res : stream) {
+          if (!first)
+            slurped += ",";
+          first = false;
+          auto doc = doc_res.value();
+          slurped += simdjson::to_json_string(doc).value();
+        }
+        slurped += "]";
+        json_str = slurped;
+      }
+
       return processRegular(json_str, opts, callbacks);
     }
 
