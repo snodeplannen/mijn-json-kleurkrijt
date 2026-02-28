@@ -117,12 +117,19 @@ class Style:
         """
         ...
     
+    @property
+    def rules_length(self) -> int:
+        """Aantal styling rules in deze Style (read-only)."""
+        ...
+    
     @staticmethod
     def get_preset(name: str) -> "Style":
         """Laad een preset thema.
         
         Beschikbare presets: default, dracula, solarized, monokai,
-        github, minimal, neon
+        github, minimal, neon, ocean, forest, cyberpunk, sunset,
+        high-contrast, debug, depth-aware, data-analysis, white,
+        nord, gruvbox, one-dark, catppuccin, ice, coffee
         
         Args:
             name: Naam van de preset
@@ -155,13 +162,11 @@ class Printer:
         """
         ...
     
-    def print(self, obj: Union[str, Any]) -> str:
-        """Formatteer en print een Python object of JSON string.
-        
-        Ondersteunt zowel Python objecten (dict, list) als JSON strings.
+    def print(self, obj: Any) -> str:
+        """Formatteer en print een Python object.
         
         Args:
-            obj: Python dict, list, JSON string, of ander object om te formatteren
+            obj: Python dict, list, of ander object om te formatteren
         
         Returns:
             Gekleurde string met ANSI escape codes
