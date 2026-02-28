@@ -6,6 +6,7 @@ CompileFlags:
     - "-IC:/CPP/mijn-json-kleurkrijt/.venv/Lib/site-packages/pybind11/include"
     - "-IC:/Users/administrator/AppData/Roaming/uv/python/cpython-3.12.9-windows-x86_64-none/Include"
     - "-IC:/CPP/mijn-json-kleurkrijt/build/_deps/catch2-src/src"
+    - "-IC:/CPP/mijn-json-kleurkrijt/build/_deps/catch2-build/generated-includes"
     - "-std=c++17"
     - "-D_WIN32"
   Remove:
@@ -15,6 +16,10 @@ CompileFlags:
 Diagnostics:
   UnusedIncludes: Relaxed
   MissingIncludes: Relaxed
+  Suppress:
+    # Catch2 REQUIRE/CHECK macros use internal <= decomposition that
+    # triggers false-positive ambiguous operator warnings in clangd
+    - ovl_ambiguous_oper_binary
 
 InlayHints:
   Enabled: No
