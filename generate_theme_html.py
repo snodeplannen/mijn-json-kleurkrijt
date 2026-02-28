@@ -5,7 +5,7 @@ import re
 
 sample = {
     "project": "mijn-json-kleurkrijt",
-    "version": "0.8.8",
+    "version": "0.9.0",
     "status": {
         "active": True,
         "debug": False,
