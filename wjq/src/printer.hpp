@@ -2,7 +2,6 @@
 #include "callbacks.hpp"
 #include "json_parser.hpp"
 #include "style.hpp"
-#include "themes.hpp"
 #include <iomanip>
 #include <simdjson.h>
 #include <sstream>
@@ -181,7 +180,8 @@ private:
   }
 
   void printBoolean(bool b, const StyleContext &ctx) {
-    Color bool_col = style.get_color(ElementType::Boolean, ctx, b ? "true" : "false");
+    Color bool_col =
+        style.get_color(ElementType::Boolean, ctx, b ? "true" : "false");
     std::string bool_str = b ? "true" : "false";
 
     // Apply callbacks
@@ -239,9 +239,12 @@ public:
     current_context = StyleContext{};
   }
 
-  void setCallbacks(const CallbackRegistry *callbacks) { callbacks_ = callbacks; }
+  void setCallbacks(const CallbackRegistry *callbacks) {
+    callbacks_ = callbacks;
+  }
 
-  void printDictJson(ondemand::object obj, const StyleContext &parent_ctx = {}) {
+  void printDictJson(ondemand::object obj,
+                     const StyleContext &parent_ctx = {}) {
     current_context = parent_ctx;
     emit_event(JsonEventType::BeginObject);
 
@@ -467,7 +470,8 @@ public:
     } catch (const simdjson_error &e) {
       throw std::runtime_error("JSON parsing error: " + std::string(e.what()));
     } catch (const std::exception &e) {
-      throw std::runtime_error("JSON processing error: " + std::string(e.what()));
+      throw std::runtime_error("JSON processing error: " +
+                               std::string(e.what()));
     }
 
     return output.str();
