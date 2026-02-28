@@ -1,6 +1,4 @@
 #include "query_engine.hpp"
-#include <algorithm>
-#include <cctype>
 #include <iomanip>
 #include <sstream>
 
@@ -22,20 +20,20 @@ QueryValue QueryValue::fromSimdjson(simdjson::ondemand::value val) {
     return QueryValue::null();
 
   case simdjson::ondemand::json_type::boolean: {
-    bool b;
-    val.get_bool().get(b);
+    bool b = false;
+    (void)val.get_bool().get(b);
     return QueryValue(b);
   }
 
   case simdjson::ondemand::json_type::number: {
-    double d;
-    val.get_double().get(d);
+    double d = 0;
+    (void)val.get_double().get(d);
     return QueryValue(d);
   }
 
   case simdjson::ondemand::json_type::string: {
     std::string_view sv;
-    val.get_string().get(sv);
+    (void)val.get_string().get(sv);
     return QueryValue(std::string(sv));
   }
 
@@ -70,9 +68,7 @@ QueryValue QueryValue::fromSimdjson(simdjson::ondemand::document &doc) {
   return fromSimdjson(val);
 }
 
-std::string QueryValue::toJson() const {
-  return toJson(0, 0);
-}
+std::string QueryValue::toJson() const { return toJson(0, 0); }
 
 std::string QueryValue::toJson(int indent, int currentIndent) const {
   std::ostringstream oss;
@@ -83,9 +79,7 @@ std::string QueryValue::toJson(int indent, int currentIndent) const {
     return std::string(currentIndent, ' ');
   };
 
-  auto newline = [indent]() -> std::string {
-    return indent > 0 ? "\n" : "";
-  };
+  auto newline = [indent]() -> std::string { return indent > 0 ? "\n" : ""; };
 
   std::visit(
       [&](const auto &val) {
@@ -139,7 +133,8 @@ bool QueryValue::operator==(const QueryValue &other) const {
         using T = std::decay_t<decltype(val)>;
         if constexpr (std::is_same_v<T, NullValue>) {
           return true;
-        } else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, double>) {
+        } else if constexpr (std::is_same_v<T, bool> ||
+                             std::is_same_v<T, double>) {
           return val == std::get<T>(other.data_);
         } else if constexpr (std::is_same_v<T, std::string>) {
           return val == std::get<std::string>(other.data_);

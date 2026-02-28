@@ -32,10 +32,10 @@ enum class JsonEventType {
 struct JsonEvent {
   JsonEventType type;
   std::string path;
-  std::string key;              // For Key events
-  std::string string_value;     // For StringValue
-  double number_value = 0;      // For NumberValue
-  bool bool_value = false;      // For BooleanValue
+  std::string key;          // For Key events
+  std::string string_value; // For StringValue
+  double number_value = 0;  // For NumberValue
+  bool bool_value = false;  // For BooleanValue
   int depth = 0;
   int array_index = -1;
   StyleContext context;
@@ -43,23 +43,23 @@ struct JsonEvent {
 
 // Callback result - allows modifying behavior
 struct CallbackResult {
-  bool skip_element = false;           // Skip this element entirely
-  bool skip_children = false;          // Skip children but keep element
-  bool custom_color = false;           // Use custom color
-  Color color{255, 255, 255};          // Custom color if set
-  std::string replacement_text;        // Replace value with this text
+  bool skip_element = false;    // Skip this element entirely
+  bool skip_children = false;   // Skip children but keep element
+  bool custom_color = false;    // Use custom color
+  Color color{255, 255, 255};   // Custom color if set
+  std::string replacement_text; // Replace value with this text
   bool replace_value = false;
 };
 
 // Callback types
 using ElementCallback = std::function<CallbackResult(const JsonEvent &)>;
-using ValueTransformCallback = std::function<std::string(const std::string &original,
-                                                          const StyleContext &ctx)>;
-using ColorOverrideCallback = std::function<std::optional<Color>(const JsonEvent &,
-                                                                  const Color &default_color)>;
-using ProgressCallback = std::function<void(size_t bytes_processed,
-                                             size_t total_bytes,
-                                             const std::string &current_path)>;
+using ValueTransformCallback = std::function<std::string(
+    const std::string &original, const StyleContext &ctx)>;
+using ColorOverrideCallback = std::function<std::optional<Color>(
+    const JsonEvent &, const Color &default_color)>;
+using ProgressCallback =
+    std::function<void(size_t bytes_processed, size_t total_bytes,
+                       const std::string &current_path)>;
 
 // Callback registry
 class CallbackRegistry {
@@ -85,9 +85,7 @@ public:
     color_overrides_.push_back(std::move(cb));
   }
 
-  void on_progress(ProgressCallback cb) {
-    progress_callback_ = std::move(cb);
-  }
+  void on_progress(ProgressCallback cb) { progress_callback_ = std::move(cb); }
 
   // Invoke callbacks
   CallbackResult invoke_element_callbacks(const JsonEvent &event) const {
@@ -146,8 +144,9 @@ public:
     return result;
   }
 
-  std::optional<Color> invoke_color_overrides(const JsonEvent &event,
-                                               const Color &default_color) const {
+  std::optional<Color>
+  invoke_color_overrides(const JsonEvent &event,
+                         const Color &default_color) const {
     for (const auto &cb : color_overrides_) {
       auto result = cb(event, default_color);
       if (result.has_value()) {
@@ -174,7 +173,8 @@ public:
   bool has_progress_callback() const { return progress_callback_ != nullptr; }
 
 private:
-  std::unordered_map<JsonEventType, std::vector<ElementCallback>> element_callbacks_;
+  std::unordered_map<JsonEventType, std::vector<ElementCallback>>
+      element_callbacks_;
   std::unordered_map<std::string, std::vector<ElementCallback>> key_callbacks_;
   std::unordered_map<std::string, std::vector<ElementCallback>> path_callbacks_;
   std::vector<ValueTransformCallback> value_transforms_;
@@ -196,7 +196,8 @@ private:
     }
   }
 
-  static bool match_pattern(const std::string &value, const std::string &pattern) {
+  static bool match_pattern(const std::string &value,
+                            const std::string &pattern) {
     if (pattern == "*")
       return true;
     if (pattern == value)
@@ -241,7 +242,7 @@ namespace callbacks {
 
 // Hide sensitive fields (e.g., passwords, tokens)
 inline ElementCallback hide_sensitive(const std::string &replacement = "***") {
-  return [replacement](const JsonEvent &event) {
+  return [replacement](const JsonEvent &) {
     CallbackResult result;
     result.replace_value = true;
     result.replacement_text = "\"" + replacement + "\"";
@@ -250,8 +251,8 @@ inline ElementCallback hide_sensitive(const std::string &replacement = "***") {
 }
 
 // Truncate long strings
-inline ValueTransformCallback truncate_strings(size_t max_length,
-                                                const std::string &suffix = "...") {
+inline ValueTransformCallback
+truncate_strings(size_t max_length, const std::string &suffix = "...") {
   return [max_length, suffix](const std::string &value,
                               const StyleContext &ctx) -> std::string {
     (void)ctx;
@@ -306,9 +307,10 @@ inline ValueTransformCallback format_numbers(char separator = ',') {
 
 // Highlight specific values
 inline ColorOverrideCallback highlight_value(const std::string &target_value,
-                                               const Color &highlight_color) {
-  return [target_value, highlight_color](const JsonEvent &event,
-                                         const Color &default_color) -> std::optional<Color> {
+                                             const Color &highlight_color) {
+  return [target_value,
+          highlight_color](const JsonEvent &event,
+                           const Color &default_color) -> std::optional<Color> {
     (void)default_color;
     if (event.type == JsonEventType::StringValue &&
         event.string_value == target_value) {

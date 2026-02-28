@@ -4,7 +4,6 @@
 #include "printer.hpp"
 #include "streaming_parser.hpp"
 #include "style.hpp"
-#include "themes.hpp"
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -12,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 
 // Windows-specific headers for console colors
 #ifdef _WIN32
@@ -415,7 +415,7 @@ std::string stripJsonQuotes(const std::string &s) {
 
 // Execute jq-style or JSONPath query filter
 int executeQueryFilter(const std::string &input, const CommandLineOptions &opts,
-                       const colored_json::CallbackRegistry &callbacks) {
+                       const colored_json::CallbackRegistry &) {
   using namespace colored_json;
 
   if (input.empty()) {
