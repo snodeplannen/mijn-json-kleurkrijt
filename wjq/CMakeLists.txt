@@ -18,7 +18,7 @@ endif()
 # Main executable
 add_executable(wjq 
     src/main.cpp
-    src/matchers.cpp
+    ../src/matchers.cpp
     src/query_engine.cpp
     src/query_parser.cpp
     src/query_executor.cpp
@@ -26,7 +26,7 @@ add_executable(wjq
     src/jsonpath_executor.cpp
 )
 
-target_include_directories(wjq PRIVATE src)
+target_include_directories(wjq PRIVATE src ../src)
 target_link_libraries(wjq PRIVATE simdjson)
 
 # Platform-specific

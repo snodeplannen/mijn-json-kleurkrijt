@@ -18,7 +18,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(simdjson)
 
-pybind11_add_module(colored_json src/bindings.cpp)
+pybind11_add_module(colored_json src/bindings.cpp src/matchers.cpp)
 
 # Link simdjson
 target_link_libraries(colored_json PRIVATE simdjson)

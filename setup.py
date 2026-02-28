@@ -9,6 +9,7 @@ ext_modules = [
         "colored_json",
         [
             "src/bindings.cpp",
+            "src/matchers.cpp",
             "third_party/simdjson/src/simdjson.cpp",
         ],
         include_dirs=[

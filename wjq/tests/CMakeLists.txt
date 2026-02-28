@@ -19,10 +19,16 @@ add_executable(wjq_tests
     test_callbacks.cpp
     test_printer.cpp
     test_streaming.cpp
-    ../src/matchers.cpp
+    test_query.cpp
+    ../../src/matchers.cpp
+    ../src/query_engine.cpp
+    ../src/query_parser.cpp
+    ../src/query_executor.cpp
+    ../src/jsonpath_parser.cpp
+    ../src/jsonpath_executor.cpp
 )
 
-target_include_directories(wjq_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(wjq_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(wjq_tests PRIVATE Catch2::Catch2WithMain simdjson)
 
 if(WIN32)
