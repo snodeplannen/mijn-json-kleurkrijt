@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 #include <functional>
+#include <map>
 #include <memory>
 #include <regex>
 #include <set>
@@ -21,14 +22,7 @@ namespace colored_json {
 class QueryValue;
 
 // Types of query values
-enum class QueryValueType {
-  Null,
-  Bool,
-  Number,
-  String,
-  Array,
-  Object
-};
+enum class QueryValueType { Null, Bool, Number, String, Array, Object };
 
 // Represents a value in the query engine
 class QueryValue {
@@ -38,7 +32,8 @@ public:
 
 private:
   struct NullValue {};
-  std::variant<NullValue, bool, double, std::string, ArrayType, ObjectType> data_;
+  std::variant<NullValue, bool, double, std::string, ArrayType, ObjectType>
+      data_;
 
 public:
   QueryValue() : data_(NullValue{}) {}
@@ -51,25 +46,29 @@ public:
 
   static QueryValue null() { return QueryValue{}; }
   static QueryValue array(ArrayType arr) { return QueryValue{std::move(arr)}; }
-  static QueryValue object(ObjectType obj) { return QueryValue{std::move(obj)}; }
+  static QueryValue object(ObjectType obj) {
+    return QueryValue{std::move(obj)};
+  }
 
   QueryValueType type() const {
-    return std::visit([](const auto &val) -> QueryValueType {
-      using T = std::decay_t<decltype(val)>;
-      if constexpr (std::is_same_v<T, NullValue>)
-        return QueryValueType::Null;
-      else if constexpr (std::is_same_v<T, bool>)
-        return QueryValueType::Bool;
-      else if constexpr (std::is_same_v<T, double>)
-        return QueryValueType::Number;
-      else if constexpr (std::is_same_v<T, std::string>)
-        return QueryValueType::String;
-      else if constexpr (std::is_same_v<T, ArrayType>)
-        return QueryValueType::Array;
-      else if constexpr (std::is_same_v<T, ObjectType>)
-        return QueryValueType::Object;
-      return QueryValueType::Null;
-    }, data_);
+    return std::visit(
+        [](const auto &val) -> QueryValueType {
+          using T = std::decay_t<decltype(val)>;
+          if constexpr (std::is_same_v<T, NullValue>)
+            return QueryValueType::Null;
+          else if constexpr (std::is_same_v<T, bool>)
+            return QueryValueType::Bool;
+          else if constexpr (std::is_same_v<T, double>)
+            return QueryValueType::Number;
+          else if constexpr (std::is_same_v<T, std::string>)
+            return QueryValueType::String;
+          else if constexpr (std::is_same_v<T, ArrayType>)
+            return QueryValueType::Array;
+          else if constexpr (std::is_same_v<T, ObjectType>)
+            return QueryValueType::Object;
+          return QueryValueType::Null;
+        },
+        data_);
   }
 
   bool isNull() const { return std::holds_alternative<NullValue>(data_); }
@@ -143,48 +142,62 @@ public:
 
 // Query operator types
 enum class QueryOpType {
-  Identity,     // .
-  Property,     // .foo, .["foo"]
-  Index,        // [0], [1:3]
-  Iterator,     // .[]
-  Recursive,    // ..
-  Pipe,         // |
-  Select,       // select(predicate)
-  Map,          // map(expr)
-  Keys,         // keys
-  Values,       // values
-  Length,       // length
-  Sort,         // sort
-  Unique,       // unique
-  Reverse,      // reverse
-  Contains,     // contains(x)
-  Has,          // has(key)
-  Add,          // +
-  Subtract,     // -
-  Multiply,     // *
-  Divide,       // /
-  Modulo,       // %
-  Equal,        // ==
-  NotEqual,     // !=
-  Less,         // <
-  LessEqual,    // <=
-  Greater,      // >
-  GreaterEqual, // >=
-  And,          // and
-  Or,           // or
-  Not,          // not
-  Literal       // literal value
+  Identity,            // .
+  Property,            // .foo, .["foo"]
+  Index,               // [0], [1:3]
+  Iterator,            // .[]
+  Recursive,           // ..
+  Pipe,                // |
+  Select,              // select(predicate)
+  Map,                 // map(expr)
+  Keys,                // keys
+  Values,              // values
+  Length,              // length
+  Sort,                // sort
+  Unique,              // unique
+  Reverse,             // reverse
+  Contains,            // contains(x)
+  Has,                 // has(key)
+  Test,                // test("regex")
+  Match,               // match("regex")
+  Sub,                 // sub("regex", "replacement")
+  Optional,            // expr?
+  TryCatch,            // try expr catch expr
+  Variable,            // $var
+  BindVariable,        // expr as $var | next
+  Add,                 // +
+  Subtract,            // -
+  Multiply,            // *
+  Divide,              // /
+  Modulo,              // %
+  Equal,               // ==
+  NotEqual,            // !=
+  Less,                // <
+  LessEqual,           // <=
+  Greater,             // >
+  GreaterEqual,        // >=
+  And,                 // and
+  Or,                  // or
+  Not,                 // not
+  Literal,             // literal value
+  ObjectConstruction,  // { key: expr, ... }
+  ArrayConstruction,   // [ expr, ... ]
+  StringInterpolation, // "literal \(expr) literal"
+  Assign,              // =
+  UpdateAssign         // |=
 };
 
 // Query operator node
 struct QueryOp {
   QueryOpType type;
-  std::string prop_name;                        // For Property
-  int64_t index = 0;                           // For Index
-  int64_t sliceStart = 0, sliceEnd = 0;        // For slice [start:end]
-  bool isSlice = false;                        // Whether this is a slice
-  QueryValue literalValue;                     // For Literal
-  std::vector<std::unique_ptr<QueryOp>> args;  // For function arguments, binary ops
+  std::string prop_name;                // For Property
+  int64_t index = 0;                    // For Index
+  int64_t sliceStart = 0, sliceEnd = 0; // For slice [start:end]
+  bool isSlice = false;                 // Whether this is a slice
+  QueryValue literalValue;              // For Literal
+  std::vector<std::unique_ptr<QueryOp>>
+      args;                             // For function arguments, binary ops
+  std::vector<std::string> object_keys; // For ObjectConstruction keys
 
   QueryOp(QueryOpType t) : type(t) {}
 
@@ -227,8 +240,8 @@ struct QueryOp {
     op->args.push_back(std::move(right));
     return op;
   }
-  static std::unique_ptr<QueryOp> function(QueryOpType type,
-                                           std::vector<std::unique_ptr<QueryOp>> args) {
+  static std::unique_ptr<QueryOp>
+  function(QueryOpType type, std::vector<std::unique_ptr<QueryOp>> args) {
     auto op = std::make_unique<QueryOp>(type);
     op->args = std::move(args);
     return op;
@@ -247,6 +260,26 @@ struct QueryOp {
     op->args.push_back(std::move(arg));
     return op;
   }
+  static std::unique_ptr<QueryOp>
+  make_object(std::vector<std::string> keys,
+              std::vector<std::unique_ptr<QueryOp>> vals) {
+    auto op = std::make_unique<QueryOp>(QueryOpType::ObjectConstruction);
+    op->object_keys = std::move(keys);
+    op->args = std::move(vals);
+    return op;
+  }
+  static std::unique_ptr<QueryOp>
+  make_array(std::vector<std::unique_ptr<QueryOp>> elements) {
+    auto op = std::make_unique<QueryOp>(QueryOpType::ArrayConstruction);
+    op->args = std::move(elements);
+    return op;
+  }
+  static std::unique_ptr<QueryOp>
+  make_string_interpolation(std::vector<std::unique_ptr<QueryOp>> parts) {
+    auto op = std::make_unique<QueryOp>(QueryOpType::StringInterpolation);
+    op->args = std::move(parts);
+    return op;
+  }
 };
 
 // Query parser - forward declaration only, implementation in cpp
@@ -257,33 +290,45 @@ std::unique_ptr<JqQueryParser> createQueryParser(const std::string &query_str);
 
 // Query execution engine
 class QueryEngine {
+  std::map<std::string, QueryValue> vars_;
+
 public:
-  // Execute a query on a JSON document
-  static QueryValue execute(const QueryOp &op, simdjson::ondemand::document &doc);
-  static QueryValue execute(const QueryOp &op, const QueryValue &value);
+  QueryEngine() = default;
+  QueryEngine(std::map<std::string, QueryValue> vars)
+      : vars_(std::move(vars)) {}
+
+  static std::unique_ptr<QueryOp> parse(const std::string &query,
+                                        std::string &error);
+  QueryValue execute(const QueryOp &op, simdjson::ondemand::document &doc);
+  QueryValue execute(const QueryOp &op, const QueryValue &value);
 
 private:
-  static QueryValue executeOp(const QueryOp &op, const QueryValue &input);
-  static QueryValue evaluateProperty(const QueryValue &input, const std::string &prop);
-  static QueryValue evaluateIndex(const QueryValue &input, int64_t index);
-  static QueryValue evaluateSlice(const QueryValue &input, int64_t start, int64_t end);
-  static QueryValue evaluateIterator(const QueryValue &input);
-  static QueryValue evaluateRecursive(const QueryValue &input, const QueryOp &subquery);
-  static QueryValue evaluateSelect(const QueryValue &input, const QueryOp &predicate);
-  static QueryValue evaluateMap(const QueryValue &input, const QueryOp &expr);
-  static QueryValue evaluateKeys(const QueryValue &input);
-  static QueryValue evaluateValues(const QueryValue &input);
-  static QueryValue evaluateLength(const QueryValue &input);
-  static QueryValue evaluateSort(const QueryValue &input);
-  static QueryValue evaluateUnique(const QueryValue &input);
-  static QueryValue evaluateReverse(const QueryValue &input);
-  static QueryValue evaluateContains(const QueryValue &input, const QueryValue &needle);
-  static QueryValue evaluateHas(const QueryValue &input, const std::string &key);
+  QueryValue executeOp(const QueryOp &op, const QueryValue &input);
+  QueryValue applyAssignment(const QueryOp &target, const QueryValue &input,
+                             const QueryValue &rootInput, const QueryOp &rhs,
+                             bool isUpdate);
+  QueryValue evaluateProperty(const QueryValue &input, const std::string &prop);
+  QueryValue evaluateIndex(const QueryValue &input, int64_t index);
+  QueryValue evaluateSlice(const QueryValue &input, int64_t start, int64_t end);
+  QueryValue evaluateIterator(const QueryValue &input);
+  QueryValue evaluateRecursive(const QueryValue &input,
+                               const QueryOp &subquery);
+  QueryValue evaluateSelect(const QueryValue &input, const QueryOp &predicate);
+  QueryValue evaluateMap(const QueryValue &input, const QueryOp &expr);
+  QueryValue evaluateKeys(const QueryValue &input);
+  QueryValue evaluateValues(const QueryValue &input);
+  QueryValue evaluateLength(const QueryValue &input);
+  QueryValue evaluateSort(const QueryValue &input);
+  QueryValue evaluateUnique(const QueryValue &input);
+  QueryValue evaluateReverse(const QueryValue &input);
+  QueryValue evaluateContains(const QueryValue &input,
+                              const QueryValue &needle);
+  QueryValue evaluateHas(const QueryValue &input, const std::string &key);
 
   // Arithmetic and comparison
-  static QueryValue evaluateBinaryOp(QueryOpType type, const QueryValue &left,
-                                     const QueryValue &right);
-  static QueryValue evaluateUnaryOp(QueryOpType type, const QueryValue &arg);
+  QueryValue evaluateBinaryOp(QueryOpType type, const QueryValue &left,
+                              const QueryValue &right);
+  QueryValue evaluateUnaryOp(QueryOpType type, const QueryValue &arg);
 };
 
 // Utility functions

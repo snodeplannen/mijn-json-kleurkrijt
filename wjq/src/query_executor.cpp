@@ -8,7 +8,8 @@ namespace colored_json {
 // QueryEngine Implementation
 // ============================================================================
 
-QueryValue QueryEngine::execute(const QueryOp &op, simdjson::ondemand::document &doc) {
+QueryValue QueryEngine::execute(const QueryOp &op,
+                                simdjson::ondemand::document &doc) {
   QueryValue input = QueryValue::fromSimdjson(doc);
   return executeOp(op, input);
 }
@@ -49,6 +50,51 @@ QueryValue QueryEngine::executeOp(const QueryOp &op, const QueryValue &input) {
       return QueryValue::null();
     auto left = executeOp(*op.args[0], input);
     return executeOp(*op.args[1], left);
+  }
+
+  case QueryOpType::Variable: {
+    auto it = vars_.find(op.prop_name);
+    if (it != vars_.end()) {
+      return it->second;
+    }
+    return QueryValue::null();
+  }
+
+  case QueryOpType::BindVariable: {
+    if (op.args.size() != 2)
+      return QueryValue::null();
+    QueryValue bound_value = executeOp(*op.args[0], input);
+
+    // Save previous value if exists (for shadowing)
+    bool has_prev = vars_.count(op.prop_name) > 0;
+    QueryValue prev_value;
+    if (has_prev)
+      prev_value = vars_[op.prop_name];
+
+    vars_[op.prop_name] = bound_value;
+    QueryValue result = executeOp(
+        *op.args[1], input); // input remains the same for the rest of pipeline
+
+    // Restore previous variable state
+    if (has_prev) {
+      vars_[op.prop_name] = prev_value;
+    } else {
+      vars_.erase(op.prop_name);
+    }
+
+    return result;
+  }
+
+  case QueryOpType::Assign: {
+    if (op.args.size() != 2)
+      return input;
+    return applyAssignment(*op.args[0], input, input, *op.args[1], false);
+  }
+
+  case QueryOpType::UpdateAssign: {
+    if (op.args.size() != 2)
+      return input;
+    return applyAssignment(*op.args[0], input, input, *op.args[1], true);
   }
 
   case QueryOpType::Select:
@@ -115,12 +161,130 @@ QueryValue QueryEngine::executeOp(const QueryOp &op, const QueryValue &input) {
     return evaluateUnaryOp(op.type, arg);
   }
 
+  case QueryOpType::Optional: {
+    if (op.args.size() != 1)
+      return QueryValue::null();
+    try {
+      return executeOp(*op.args[0], input);
+    } catch (...) {
+      // In a more strict engine, this would catch type errors.
+      // For now, it evaluates and swallows C++ exceptions.
+      return QueryValue::null();
+    }
+  }
+
+  case QueryOpType::TryCatch: {
+    if (op.args.size() != 2)
+      return QueryValue::null();
+    try {
+      return executeOp(*op.args[0], input);
+    } catch (...) {
+      return executeOp(*op.args[1], input);
+    }
+  }
+
+  case QueryOpType::Test: {
+    if (op.args.size() != 1 || !input.isString() ||
+        op.args[0]->type != QueryOpType::Literal ||
+        !op.args[0]->literalValue.isString()) {
+      return QueryValue(false);
+    }
+    const std::string &str = input.asString();
+    const std::string &pattern = op.args[0]->literalValue.asString();
+    try {
+      std::regex re(pattern);
+      return QueryValue(std::regex_search(str, re));
+    } catch (...) {
+      return QueryValue(false);
+    }
+  }
+
+  case QueryOpType::Match: {
+    if (op.args.size() != 1 || !input.isString() ||
+        op.args[0]->type != QueryOpType::Literal ||
+        !op.args[0]->literalValue.isString()) {
+      return QueryValue::null();
+    }
+    const std::string &str = input.asString();
+    const std::string &pattern = op.args[0]->literalValue.asString();
+    try {
+      std::regex re(pattern);
+      std::smatch m;
+      if (std::regex_search(str, m, re)) {
+        QueryValue::ObjectType obj;
+        obj.push_back({"string", QueryValue(m.str())});
+        obj.push_back(
+            {"offset", QueryValue(static_cast<double>(m.position()))});
+        obj.push_back({"length", QueryValue(static_cast<double>(m.length()))});
+        return QueryValue::object(std::move(obj));
+      }
+    } catch (...) {
+    }
+    return QueryValue::null();
+  }
+
+  case QueryOpType::Sub: {
+    if (op.args.size() != 2 || !input.isString() ||
+        op.args[0]->type != QueryOpType::Literal ||
+        !op.args[0]->literalValue.isString() ||
+        op.args[1]->type != QueryOpType::Literal ||
+        !op.args[1]->literalValue.isString()) {
+      return input;
+    }
+    const std::string &str = input.asString();
+    const std::string &pattern = op.args[0]->literalValue.asString();
+    const std::string &replacement = op.args[1]->literalValue.asString();
+    try {
+      std::regex re(pattern);
+      return QueryValue(std::regex_replace(str, re, replacement));
+    } catch (...) {
+    }
+    return input;
+  }
+
+  case QueryOpType::StringInterpolation: {
+    std::string result = "";
+    for (size_t i = 0; i < op.args.size(); ++i) {
+      QueryValue val = executeOp(*op.args[i], input);
+      if (val.isString()) {
+        result += val.asString();
+      } else if (!val.isNull()) {
+        // use compact formatting for strings? toJson is usually fine.
+        result += val.toJson();
+      }
+    }
+    return QueryValue(result);
+  }
+
+  case QueryOpType::ObjectConstruction: {
+    QueryValue::ObjectType obj;
+    for (size_t i = 0; i < op.args.size(); ++i) {
+      QueryValue val = executeOp(*op.args[i], input);
+      if (!val.isNull()) {
+        obj.push_back({op.object_keys[i], val});
+      }
+    }
+    return QueryValue::object(std::move(obj));
+  }
+
+  case QueryOpType::ArrayConstruction: {
+    QueryValue::ArrayType arr;
+    for (size_t i = 0; i < op.args.size(); ++i) {
+      QueryValue val = executeOp(*op.args[i], input);
+      if (!val.isNull()) {
+        arr.push_back(val);
+      }
+    }
+    return QueryValue::array(std::move(arr));
+  }
+
   default:
     return QueryValue::null();
   }
 }
 
-QueryValue QueryEngine::evaluateProperty(const QueryValue &input, const std::string &prop) {
+QueryValue QueryEngine::evaluateProperty(const QueryValue &input,
+                                         const std::string &prop) {
   if (input.isObject()) {
     for (const auto &[key, val] : input.asObject()) {
       if (key == prop) {
@@ -160,7 +324,8 @@ QueryValue QueryEngine::evaluateIndex(const QueryValue &input, int64_t index) {
   return QueryValue::null();
 }
 
-QueryValue QueryEngine::evaluateSlice(const QueryValue &input, int64_t start, int64_t end) {
+QueryValue QueryEngine::evaluateSlice(const QueryValue &input, int64_t start,
+                                      int64_t end) {
   if (!input.isArray())
     return QueryValue::array({});
 
@@ -205,7 +370,8 @@ QueryValue QueryEngine::evaluateIterator(const QueryValue &input) {
   return QueryValue::array({});
 }
 
-QueryValue QueryEngine::evaluateRecursive(const QueryValue &input, const QueryOp &subquery) {
+QueryValue QueryEngine::evaluateRecursive(const QueryValue &input,
+                                          const QueryOp &subquery) {
   QueryValue::ArrayType result;
 
   std::function<void(const QueryValue &)> collect = [&](const QueryValue &val) {
@@ -237,7 +403,8 @@ QueryValue QueryEngine::evaluateRecursive(const QueryValue &input, const QueryOp
   return QueryValue::array(std::move(result));
 }
 
-QueryValue QueryEngine::evaluateSelect(const QueryValue &input, const QueryOp &predicate) {
+QueryValue QueryEngine::evaluateSelect(const QueryValue &input,
+                                       const QueryOp &predicate) {
   if (!input.isArray()) {
     // If input is not array, just test the predicate
     QueryValue test = executeOp(predicate, input);
@@ -257,7 +424,8 @@ QueryValue QueryEngine::evaluateSelect(const QueryValue &input, const QueryOp &p
   return QueryValue::array(std::move(result));
 }
 
-QueryValue QueryEngine::evaluateMap(const QueryValue &input, const QueryOp &expr) {
+QueryValue QueryEngine::evaluateMap(const QueryValue &input,
+                                    const QueryOp &expr) {
   if (!input.isArray()) {
     return QueryValue::array({});
   }
@@ -331,19 +499,22 @@ QueryValue QueryEngine::evaluateReverse(const QueryValue &input) {
   return QueryValue::array(std::move(arr));
 }
 
-QueryValue QueryEngine::evaluateContains(const QueryValue &input, const QueryValue &needle) {
+QueryValue QueryEngine::evaluateContains(const QueryValue &input,
+                                         const QueryValue &needle) {
   if (input.isArray()) {
     for (const auto &elem : input.asArray()) {
       if (elem == needle)
         return QueryValue(true);
     }
   } else if (input.isString() && needle.isString()) {
-    return QueryValue(input.asString().find(needle.asString()) != std::string::npos);
+    return QueryValue(input.asString().find(needle.asString()) !=
+                      std::string::npos);
   }
   return QueryValue(false);
 }
 
-QueryValue QueryEngine::evaluateHas(const QueryValue &input, const std::string &key) {
+QueryValue QueryEngine::evaluateHas(const QueryValue &input,
+                                    const std::string &key) {
   if (input.isObject()) {
     for (const auto &[k, _] : input.asObject()) {
       if (k == key)
@@ -353,8 +524,9 @@ QueryValue QueryEngine::evaluateHas(const QueryValue &input, const std::string &
   return QueryValue(false);
 }
 
-QueryValue QueryEngine::evaluateBinaryOp(QueryOpType type, const QueryValue &left,
-                                          const QueryValue &right) {
+QueryValue QueryEngine::evaluateBinaryOp(QueryOpType type,
+                                         const QueryValue &left,
+                                         const QueryValue &right) {
   switch (type) {
   case QueryOpType::Equal:
     return QueryValue(left == right);
@@ -404,7 +576,8 @@ QueryValue QueryEngine::evaluateBinaryOp(QueryOpType type, const QueryValue &lef
   return QueryValue::null();
 }
 
-QueryValue QueryEngine::evaluateUnaryOp(QueryOpType type, const QueryValue &arg) {
+QueryValue QueryEngine::evaluateUnaryOp(QueryOpType type,
+                                        const QueryValue &arg) {
   switch (type) {
   case QueryOpType::Not:
     if (arg.isBool())
@@ -423,6 +596,61 @@ QueryValue QueryEngine::evaluateUnaryOp(QueryOpType type, const QueryValue &arg)
     break;
   }
   return QueryValue::null();
+}
+
+QueryValue QueryEngine::applyAssignment(const QueryOp &target,
+                                        const QueryValue &input,
+                                        const QueryValue &rootInput,
+                                        const QueryOp &rhs, bool isUpdate) {
+  if (target.type == QueryOpType::Property) {
+    if (!input.isObject())
+      return input;
+    auto obj = input.asObject();
+    bool found = false;
+    for (auto &[k, v] : obj) {
+      if (k == target.prop_name) {
+        if (isUpdate) {
+          v = executeOp(rhs, v);
+        } else {
+          v = executeOp(rhs, rootInput);
+        }
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      QueryValue newVal = isUpdate ? executeOp(rhs, QueryValue::null())
+                                   : executeOp(rhs, rootInput);
+      obj.push_back({target.prop_name, newVal});
+    }
+    return QueryValue::object(std::move(obj));
+  }
+
+  if (target.type == QueryOpType::Index && !target.isSlice) {
+    if (!input.isArray())
+      return input;
+    auto arr = input.asArray();
+    if (target.index >= 0 && target.index < static_cast<int64_t>(arr.size())) {
+      if (isUpdate) {
+        arr[target.index] = executeOp(rhs, arr[target.index]);
+      } else {
+        arr[target.index] = executeOp(rhs, rootInput);
+      }
+    }
+    return QueryValue::array(std::move(arr));
+  }
+
+  if (target.type == QueryOpType::Pipe) {
+    if (target.args.size() != 2)
+      return input;
+    QueryValue lhs_val = executeOp(*target.args[0], input);
+    QueryValue new_lhs_val =
+        applyAssignment(*target.args[1], lhs_val, rootInput, rhs, isUpdate);
+    auto mock_rhs = QueryOp::literal(new_lhs_val);
+    return applyAssignment(*target.args[0], input, rootInput, *mock_rhs, false);
+  }
+
+  return input;
 }
 
 } // namespace colored_json
