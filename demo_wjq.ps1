@@ -45,4 +45,55 @@ Write-Host "Forceer 256 kleuren:" -ForegroundColor Yellow
 Write-Host "Zet kleur uit (disabled):" -ForegroundColor Yellow
 & $wjq -m disabled $testJson
 
+Show-Header "Value-gebaseerde Kleuring (boolean true=groen, false=rood)"
+Write-Host "Booleans en null waarden:" -ForegroundColor Yellow
+'{
+  "feature_flags": {
+    "dark_mode": true,
+    "beta_access": false,
+    "notifications": true,
+    "maintenance_mode": false,
+    "api_v2": true
+  },
+  "user": {
+    "name": "Alice",
+    "verified": true,
+    "banned": false,
+    "deleted_at": null,
+    "score": 42.5
+  }
+}' | & $wjq
+
+Show-Header "Debug Thema (error/warning highlighting)"
+Write-Host "Het debug thema kleurt strings met 'error', 'warning', 'fail' etc. anders:" -ForegroundColor Yellow
+'{
+  "status": "error",
+  "level": "warning",
+  "message": "Connection failed",
+  "retry": true,
+  "fallback": null,
+  "details": {
+    "code": 500,
+    "type": "critical",
+    "resolved": false,
+    "info": "success"
+  }
+}' | & $wjq -t debug
+
+Show-Header "Depth-Aware Thema (diepte-gebaseerde kleuring)"
+Write-Host "Kleuren veranderen op basis van nesting-diepte:" -ForegroundColor Yellow
+'{
+  "level_0": {
+    "level_1": {
+      "level_2": {
+        "level_3": {
+          "deep": true
+        }
+      },
+      "sibling": "waarde"
+    },
+    "items": [1, 2, 3]
+  }
+}' | & $wjq -t depth-aware
+
 Show-Header "Einde Demo"
