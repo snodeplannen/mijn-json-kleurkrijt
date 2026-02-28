@@ -1,4 +1,4 @@
-$wjq = ".\wjq\build3\Release\wjq.exe"
+$wjq = ".\build\wjq\Release\wjq.exe"
 $testJson = "wjq\tests\data\simple.json"
 $testJsonl = "wjq\tests\data\mixed.jsonl"
 
@@ -13,7 +13,9 @@ if (-not (Test-Path $wjq)) {
 }
 
 Show-Header "Demonstratie van Kleurenpaletten (Thema's)"
-$themes = @("default", "dracula", "solarized", "monokai", "github", "minimal", "neon")
+$themes = @("default", "dracula", "solarized", "monokai", "github", "minimal", "neon",
+    "ocean", "forest", "cyberpunk", "sunset", "high-contrast", "white",
+    "nord", "gruvbox", "one-dark", "catppuccin", "ice", "coffee")
 
 foreach ($theme in $themes) {
     Write-Host "Thema: $theme" -ForegroundColor Yellow
