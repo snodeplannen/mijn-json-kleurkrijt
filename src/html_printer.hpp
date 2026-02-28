@@ -436,6 +436,8 @@ public:
       addSpan(null_col, "null");
       break;
     }
+    default:
+      break;
     }
   }
 

@@ -5,6 +5,7 @@ CompileFlags:
     - "-IC:/CPP/mijn-json-kleurkrijt/src"
     - "-IC:/CPP/mijn-json-kleurkrijt/.venv/Lib/site-packages/pybind11/include"
     - "-IC:/Users/administrator/AppData/Roaming/uv/python/cpython-3.12.9-windows-x86_64-none/Include"
+    - "-IC:/CPP/mijn-json-kleurkrijt/build/_deps/catch2-src/src"
     - "-std=c++17"
     - "-D_WIN32"
   Remove:
@@ -14,6 +15,6 @@ CompileFlags:
 Diagnostics:
   UnusedIncludes: Relaxed
   MissingIncludes: Relaxed
-  
+
 InlayHints:
   Enabled: No

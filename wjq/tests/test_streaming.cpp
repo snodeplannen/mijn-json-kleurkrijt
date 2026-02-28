@@ -1,6 +1,4 @@
-#include "printer.hpp"
 #include "streaming_parser.hpp"
-#include "themes.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <fstream>
 #include <sstream>

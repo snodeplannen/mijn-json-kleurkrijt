@@ -2,7 +2,9 @@ CompileFlags:
   Add:
     - "-IC:/CPP/mijn-json-kleurkrijt/wjq/libs/simdjson"
     - "-IC:/CPP/mijn-json-kleurkrijt/wjq/src"
-    - "-std=c++20"
+    - "-IC:/CPP/mijn-json-kleurkrijt/src"
+    - "-IC:/CPP/mijn-json-kleurkrijt/build/_deps/catch2-src/src"
+    - "-std=c++17"
     - "-D_WIN32"
   Remove:
     - "-W*"

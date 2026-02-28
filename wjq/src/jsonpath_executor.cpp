@@ -1,6 +1,4 @@
 #include "jsonpath.hpp"
-#include "query.hpp"
-#include <cmath>
 
 namespace colored_json {
 

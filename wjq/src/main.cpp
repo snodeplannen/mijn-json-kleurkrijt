@@ -2,7 +2,6 @@
 #include "json_parser.hpp"
 #include "jsonpath.hpp"
 #include "printer.hpp"
-#include "query.hpp"
 #include "streaming_parser.hpp"
 #include "style.hpp"
 #include "themes.hpp"
