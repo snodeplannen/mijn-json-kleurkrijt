@@ -21,20 +21,26 @@ QueryValue QueryValue::fromSimdjson(simdjson::ondemand::value val) {
 
   case simdjson::ondemand::json_type::boolean: {
     bool b = false;
-    (void)val.get_bool().get(b);
-    return QueryValue(b);
+    if (val.get_bool().get(b) == simdjson::SUCCESS) {
+      return QueryValue(b);
+    }
+    return QueryValue::null();
   }
 
   case simdjson::ondemand::json_type::number: {
     double d = 0;
-    (void)val.get_double().get(d);
-    return QueryValue(d);
+    if (val.get_double().get(d) == simdjson::SUCCESS) {
+      return QueryValue(d);
+    }
+    return QueryValue::null();
   }
 
   case simdjson::ondemand::json_type::string: {
     std::string_view sv;
-    (void)val.get_string().get(sv);
-    return QueryValue(std::string(sv));
+    if (val.get_string().get(sv) == simdjson::SUCCESS) {
+      return QueryValue(std::string(sv));
+    }
+    return QueryValue::null();
   }
 
   case simdjson::ondemand::json_type::array: {

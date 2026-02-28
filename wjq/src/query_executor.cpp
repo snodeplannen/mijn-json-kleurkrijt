@@ -1,5 +1,6 @@
 #include "query_engine.hpp"
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <set>
 

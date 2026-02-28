@@ -32,7 +32,7 @@ ext_modules = [
 
 setup(
     name="colored_json",
-    version="0.8.5",
+    version="0.8.6",
     description="Razendsnelle gekleurde JSON/dict printer",
     long_description="C++ module voor gekleurde weergave van Python dicts met preset thema's",
     ext_modules=ext_modules,
