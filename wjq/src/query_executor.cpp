@@ -1,5 +1,6 @@
 #include "query_engine.hpp"
 #include <algorithm>
+#include <functional>
 #include <set>
 
 namespace colored_json {

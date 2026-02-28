@@ -1,14 +1,12 @@
 #pragma once
-#include <functional>
 #include <regex>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace colored_json {
 
 // Forward declarations
-struct Color;
+struct d;
 struct StyleContext;
 
 // Match result containing match info
@@ -19,11 +17,19 @@ struct MatchResult {
 
   explicit MatchResult(bool m = false) : matched(m) {}
   MatchResult(bool m, double strength, std::string pattern = "")
-      : matched(m), match_strength(strength), matched_pattern(std::move(pattern)) {}
+      : matched(m), match_strength(strength),
+        matched_pattern(std::move(pattern)) {}
 };
 
 // Numeric comparison types
-enum class CompareOp { Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual };
+enum class CompareOp {
+  Equal,
+  NotEqual,
+  Less,
+  LessEqual,
+  Greater,
+  GreaterEqual
+};
 
 // Base matcher interface
 class Matcher {
@@ -41,7 +47,8 @@ class KeywordMatcher : public Matcher {
   bool case_sensitive;
 
 public:
-  explicit KeywordMatcher(std::vector<std::string> kws, bool case_sensitive = true)
+  explicit KeywordMatcher(std::vector<std::string> kws,
+                          bool case_sensitive = true)
       : keywords(std::move(kws)), case_sensitive(case_sensitive) {}
 
   MatchResult match(const std::string &value,
@@ -127,7 +134,8 @@ class AnyMatcher : public Matcher {
   std::vector<std::unique_ptr<Matcher>> matchers;
 
 public:
-  explicit AnyMatcher(std::vector<std::unique_ptr<Matcher>> m) : matchers(std::move(m)) {}
+  explicit AnyMatcher(std::vector<std::unique_ptr<Matcher>> m)
+      : matchers(std::move(m)) {}
 
   MatchResult match(const std::string &value,
                     const StyleContext &ctx) const override;
@@ -139,7 +147,8 @@ class AllMatcher : public Matcher {
   std::vector<std::unique_ptr<Matcher>> matchers;
 
 public:
-  explicit AllMatcher(std::vector<std::unique_ptr<Matcher>> m) : matchers(std::move(m)) {}
+  explicit AllMatcher(std::vector<std::unique_ptr<Matcher>> m)
+      : matchers(std::move(m)) {}
 
   MatchResult match(const std::string &value,
                     const StyleContext &ctx) const override;
@@ -180,11 +189,13 @@ inline std::unique_ptr<Matcher> path(const std::string &pattern) {
 }
 
 // Helper to combine matchers
-inline std::unique_ptr<Matcher> any_of(std::vector<std::unique_ptr<Matcher>> matchers) {
+inline std::unique_ptr<Matcher>
+any_of(std::vector<std::unique_ptr<Matcher>> matchers) {
   return std::make_unique<AnyMatcher>(std::move(matchers));
 }
 
-inline std::unique_ptr<Matcher> all_of(std::vector<std::unique_ptr<Matcher>> matchers) {
+inline std::unique_ptr<Matcher>
+all_of(std::vector<std::unique_ptr<Matcher>> matchers) {
   return std::make_unique<AllMatcher>(std::move(matchers));
 }
 
