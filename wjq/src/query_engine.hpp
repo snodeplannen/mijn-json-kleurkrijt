@@ -66,7 +66,6 @@ public:
             return QueryValueType::Array;
           else if constexpr (std::is_same_v<T, ObjectType>)
             return QueryValueType::Object;
-          return QueryValueType::Null;
         },
         data_);
   }
