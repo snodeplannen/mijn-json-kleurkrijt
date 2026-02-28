@@ -1,141 +1,191 @@
-# Gekleurde JSON Module
+# mijn-json-kleurkrijt
 
-Een razendsnelle C++ module met pybind11 voor gekleurde weergave van Python dicts/JSON data. De module ondersteunt individuele kleuring, presets, ANSI/TTY kleuren, en zowel indented als compacte views.
+Een razendsnelle C++ bibliotheek en CLI tool voor gekleurde JSON weergave. Bevat een Python module (pybind11) en een standalone `wjq` command-line tool met jq-compatibele query engine.
 
 ## Features
 
-- **Performance**: Volledig in C++ met minimale overhead - 50-100x sneller dan pure Python libraries
-- **JSON String Input**: Ondersteunt zowel Python objecten als JSON strings - 2-5x sneller met JSON strings
-- **simdjson**: Gebruikt simdjson voor razendsnelle JSON parsing (SIMD-optimized)
-- **GIL Release**: GIL wordt vrijgegeven tijdens JSON string processing voor betere multi-threaded performance
-- **Dual Mode**: Automatische detectie van JSON strings vs Python objecten
-- **Individuele kleuring**: Elk element type (keys, values, syntax) heeft eigen kleur
-- **Per-key/veld kleuren**: Specifieke keys en values kunnen individuele kleuren krijgen
-- **Presets**: Ingebouwde thema's (dracula, solarized, monokai, github, minimal, neon)
-- **ANSI modes**: Auto-detectie, 16 kleuren, 256 kleuren, of truecolor
-- **View modes**: Zowel indented (netjes uitgelijnd) als compact (minimaal)
-- **Python integratie**: Werkt direct met Python dicts, lists, etc.
-- **Custom styling**: Volledig aanpasbare kleuren en stijlen
-- **TTY support**: Detecteert automatisch of terminal kleuren ondersteunt
-- **HTML export**: Genereer complete HTML pagina's met gekleurde JSON
-- **Markdown export**: Genereer Markdown met gekleurde JSON (HTML code blocks)
-- **Type hints**: Volledige type stubs (`.pyi`) voor IDE ondersteuning en type checking
+### Core Library (C++ / Python)
+- **Performance**: Volledig C++ met simdjson (SIMD-optimized) — 50-100x sneller dan pure Python
+- **JSON String Input**: Direct JSON parsen met GIL release voor multi-threaded performance
+- **Value-Dependent Styling**: Rule-based kleuring op basis van waarden (`true` = groen, `false` = rood)
+- **StyleRule & Matcher API**: `KeywordMatcher`, `RegexMatcher`, `RangeMatcher` voor flexibele value matching
+- **21+ Thema's**: default, dracula, solarized, monokai, github, nord, gruvbox, catppuccin, cyberpunk, en meer
+- **Export formaten**: Console (ANSI), HTML, Markdown
+- **Kleurmodi**: Auto-detectie, 16, 256, truecolor, disabled
+- **Type hints**: Volledige `.pyi` stubs voor IDE ondersteuning
 
-## wjq - Windows JSON Query Tool
+### wjq — Windows JSON Query Tool
+- **jq-compatibele query engine** met ondersteuning voor:
+  - Property access: `.name`, `.user.age`, `.[0]`
+  - Array iteration: `.users[]`, `.items[0:5]`
+  - Pipe: `.users | map(.name)`
+  - Filtering: `select(.age > 18)`
+  - Object/array construction: `{name: .first}`, `[.a, .b]`
+  - String interpolation: `"User \(.name) is \(.age)"`
+  - Mutation: `.name = "x"`, `.age |= . + 1`
+  - Regex: `test("pattern")`, `match("regex")`, `sub("old", "new")`
+  - Try/catch: `try .x`, `.x?`, `try .x catch "fallback"`
+  - Variable bindings: `.name as $n | {user: $n}`
+  - Arithmetic: `. + 1`, `. * 2`, `. / 3`
+  - Boolean logic: `and`, `or`, `not`
+  - Functies: `keys`, `values`, `length`, `sort`, `unique`, `reverse`, `has`, `contains`
+- **JSONPath** queries: `$.store.book[0]`, `$..author`, `$..book[?(@.price<10)]`
+- **Streaming parser** met `simdjson::iterate_many` voor grote bestanden en NDJSON
+- **21+ kleurthema's** met boolean true/false kleuring
 
-De `wjq` tool is een standalone command-line executable voor snelle JSON formatting op Windows. Het is gebouwd met C++ en simdjson voor maximale performance.
-
-### Features
-
-- **Razendsnelle JSON parsing** met simdjson (SIMD-optimized)
-- **JSONL support**: Verwerk meerdere JSON documenten in één bestand (JSON Lines format)
-- **Kleurthema's**: 7 ingebouwde themes (default, dracula, solarized, monokai, github, minimal, neon)
-- **Flexibele output**: Compact of geïndenteerd met configureerbare indent size
-- **Kleurmodi**: Auto-detectie, 16, 256, truecolor, of disabled
-- **Windows ANSI support**: Automatische activering van ANSI escape codes in Windows Terminal
-- **Pipe support**: Lees van stdin of bestand
-
-### Installatie
-
-```bash
-# Build wjq tool
-cd wjq
-cmake -B build -G "Visual Studio 17 2022"
-cmake --build . --config Release
-
-# Executable is beschikbaar in: wjq/build/Release/wjq.exe
-```
-
-### Gebruik
-
-```bash
-# Basis gebruik
-wjq data.json
-
-# Met thema
-wjq -t dracula data.json
-
-# Compact mode
-wjq -c data.json
-
-# Custom indent size
-wjq -i 4 data.json
-
-# Kleurmodus specificeren
-wjq --color-mode 256 data.json
-
-# Van stdin
-cat data.json | wjq
-
-# JSONL bestand (meerdere JSON documenten)
-wjq mixed.jsonl
-```
-
-### Opties
-
-```
--t, --theme THEMA      Kleurenschema (default, dracula, solarized, monokai, github, minimal, neon)
--m, --color-mode MODE  Kleurmodus: auto, 16, 256, truecolor, disabled
--c, --compact          Compacte output (geen extra spaties/nieuwe regels)
--i, --indent N         Indentatiegrootte (standaard: 2)
--h, --help             Toon help
--v, --version          Toon versie
-```
-
-### Voorbeelden
-
-```bash
-# Dracula theme met 256 kleuren
-wjq -t dracula --color-mode 256 data.json
-
-# Compact output met monokai theme
-wjq -c -t monokai data.json
-
-# Custom indent met neon theme
-wjq -i 4 -t neon data.json
-
-# Verwerk JSONL bestand
-wjq mixed.jsonl
-```
+---
 
 ## Installatie
 
 ### Vereisten
 
-- Python 3.7 of hoger
-- C++ compiler met C++17 ondersteuning (GCC, Clang, of MSVC)
-- pybind11 >= 2.10.0
-- simdjson (wordt automatisch gedownload via git submodule)
+- C++17 compiler (MSVC, GCC, of Clang)
+- CMake 3.14+
+- Python 3.8+ (voor de Python module)
+- pybind11 (automatisch via pip)
 
-### Installatie stappen
+### Python Module
 
 ```bash
-# Clone repository met submodules (simdjson)
+# Clone met submodules
 git clone --recurse-submodules <repository-url>
 cd mijn-json-kleurkrijt
 
-# Of als je al gecloned hebt zonder submodules:
-git submodule update --init --recursive
-
-# Installeer dependencies en compileer de module met uv
+# Installeer met uv
 uv pip install -e .
 
 # Of met dev dependencies
 uv pip install -e ".[dev]"
 ```
 
-**Belangrijk**: De simdjson dependency wordt automatisch gedownload via git submodule. Zorg dat je de repository met `--recurse-submodules` clone, of run `git submodule update --init --recursive` na het clonen.
-
-### Alternatief: CMake build
+### wjq Tool (standalone C++ executable)
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build . --config Release
-# Kopieer de gegenereerde module naar de juiste locatie
+# Vanuit de project root:
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Release
+
+# Executable: build/wjq/Release/wjq.exe
 ```
 
-## Quick Start
+---
+
+## wjq Gebruik
+
+### Basis
+
+```bash
+# Pretty-print een JSON bestand
+wjq data.json
+
+# Met thema
+wjq -t dracula data.json
+
+# Van stdin
+cat data.json | wjq
+
+# Compact mode
+wjq -c data.json
+```
+
+### Query Filters (jq-stijl)
+
+```bash
+# Property access
+wjq '.name' data.json
+wjq '.users[0].email' data.json
+
+# Array iteratie
+wjq '.users[].name' data.json
+
+# Pipe en functies
+wjq '.users | length' data.json
+wjq '.users | map(.name)' data.json
+wjq '.users | select(.active)' data.json
+
+# Object constructie
+wjq '{name: .first_name, age: .years}' data.json
+
+# String interpolatie
+wjq '"User \(.name) is \(.age) years old"' data.json
+
+# Variable bindings
+wjq '.name as $n | {user: $n, years: .age}' data.json
+
+# Regex
+wjq '.email | test("@gmail")' data.json
+
+# Arithmetic
+wjq '.price | . * 1.21' data.json
+
+# Try/catch
+wjq 'try .missing_field catch "not found"' data.json
+```
+
+### JSONPath Queries
+
+```bash
+wjq '$.store.book[0]' data.json
+wjq '$..author' data.json
+wjq '$..book[?(@.price<10)]' data.json
+```
+
+### CLI Flags
+
+```
+Formatting:
+  -c, --compact          Compacte output
+  -i, --indent N         Indent grootte (1-8, standaard: 2)
+  -r, --raw-output       Strings zonder JSON quotes
+  -s, --slurp            Lees stream van documenten als array
+  -t, --theme NAAM       Kleurthema kiezen
+  -m, --color-mode MODE  Kleurmodus: auto, 16, 256, truecolor, disabled
+
+Variables:
+  --arg name value       String variabele doorgeven als $name
+  --argjson name value   JSON variabele doorgeven als $name
+
+Streaming:
+  -S, --streaming        Streaming parser voor grote bestanden
+  -l, --line-by-line     JSONL line-by-line parsing
+
+Data transformatie:
+  --hide-sensitive       Verberg wachtwoorden, tokens, secrets
+  --truncate N           Strings afkappen op N karakters
+  --format-numbers       Duizendtallen-separator toevoegen
+
+Informatie:
+  --themes               Toon beschikbare thema's
+  -h, --help             Toon help
+  -v, --version          Toon versie
+```
+
+### Voorbeelden
+
+```bash
+# Raw output voor scripting
+echo '{"name":"Alice"}' | wjq -r '.name'
+# Output: Alice
+
+# Slurp meerdere documenten in array
+echo '{"a":1}{"b":2}{"c":3}' | wjq -s '.'
+# Output: [{"a":1},{"b":2},{"c":3}]
+
+# Variabelen doorgeven
+echo '{"items":[1,2,3]}' | wjq --argjson limit 2 '.items[:$limit]'
+
+# Dracula theme met 256 kleuren
+wjq -t dracula -m 256 data.json
+
+# Streaming voor grote bestanden
+wjq -S large-file.json
+```
+
+---
+
+## Python Module
+
+### Quick Start
 
 ```python
 import colored_json
@@ -144,274 +194,49 @@ import colored_json
 data = {"name": "Alice", "age": 30, "active": True}
 colored_json.print(data)
 
-# Met preset
+# Met preset thema
 style = colored_json.Style.get_preset("dracula")
 colored_json.print(data, style)
 
-# Compact mode
-style = colored_json.Style.get_preset("default")
-style.compact = True
-colored_json.print(data, style)
-
-# Custom kleuren
-style = colored_json.Style()
-style.key_color = colored_json.colors.bright_cyan
-style.string_color = colored_json.colors.bright_green
-colored_json.print(data, style)
-
-# Individuele kleuren per key/veld
-style = colored_json.Style()
-style.set_key_color("user", colored_json.Color(255, 0, 0))  # Rode "user" key
-style.set_key_color("name", colored_json.Color(0, 255, 0))  # Groene "name" keys
-style.set_value_color("user.name", colored_json.Color(255, 20, 147))  # Dieproze voor user.name waarde
-colored_json.print(data, style)
-
-# Format string (niet direct printen)
-formatted = colored_json.format(data, style)
-print(formatted)
-
-# JSON string input (razendsnel met simdjson en GIL release)
+# JSON string input (sneller met simdjson)
 json_str = '{"name": "Alice", "age": 30, "active": true}'
-colored_json.print(json_str)  # Auto-detect als JSON string
-
-# Expliciete JSON string functie (nog sneller)
 result = colored_json.format_from_json(json_str, style)
-print(result)
-
-# HTML export
-html = colored_json.to_html(data, style, title="My JSON", background_color="#1e1e1e")
-with open("output.html", "w", encoding="utf-8") as f:
-    f.write(html)
-
-# Markdown export (met HTML voor kleuren)
-markdown = colored_json.to_markdown_html(data, style, title="My JSON", background_color="#1e1e1e")
-with open("output.md", "w", encoding="utf-8") as f:
-    f.write(markdown)
 ```
 
-## API Referentie
-
-### `colored_json.print(obj, style=None)`
-
-Print een Python object direct naar de console met kleuren.
-
-**Parameters:**
-- `obj`: Python dict, list, of ander object om te printen
-- `style`: Optionele Style object (standaard: Style())
-
-**Opmerking:** Deze functie gebruikt `py::print()` en vereist de GIL. Voor JSON string input, gebruik `format()` of `format_from_json()` in plaats daarvan.
-
-### `colored_json.format(obj, style=None)`
-
-Retourneert een gekleurde string zonder direct te printen. Ondersteunt zowel Python objecten als JSON strings (auto-detect).
-
-**Parameters:**
-- `obj`: Python dict, list, JSON string, of ander object om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-
-**Returns:** Gekleurde string met ANSI escape codes
-
-**Opmerking:** JSON strings worden automatisch gedetecteerd en geoptimaliseerd verwerkt met simdjson en GIL release.
-
-### `colored_json.format_from_json(json_str, style=None)`
-
-Expliciete functie voor JSON string input. Geoptimaliseerd met simdjson en GIL release voor maximale performance.
-
-**Parameters:**
-- `json_str`: JSON string om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-
-**Returns:** Gekleurde string met ANSI escape codes
-
-**Performance:** 2-5x sneller dan Python object input voor grote datasets
-
-### `colored_json.to_html(obj, style=None, title="Colored JSON", background_color="#1e1e1e", font_family="Consolas, 'Courier New', monospace")`
-
-Genereert een complete HTML pagina met gekleurde JSON. Ondersteunt zowel Python objecten als JSON strings (auto-detect).
-
-**Parameters:**
-- `obj`: Python dict, list, JSON string, of ander object om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-- `title`: Titel voor de HTML pagina
-- `background_color`: Achtergrondkleur (CSS kleur string, bijv. "#1e1e1e" of "rgb(30, 30, 30)")
-- `font_family`: Font familie voor de JSON weergave
-
-**Returns:** Complete HTML string met inline styles
-
-### `colored_json.to_html_from_json(json_str, style=None, title="Colored JSON", background_color="#1e1e1e", font_family="Consolas, 'Courier New', monospace")`
-
-Expliciete functie voor JSON string input naar HTML. Geoptimaliseerd met simdjson en GIL release.
-
-**Parameters:**
-- `json_str`: JSON string om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-- `title`: Titel voor de HTML pagina
-- `background_color`: Achtergrondkleur (CSS kleur string)
-- `font_family`: Font familie voor de JSON weergave
-
-**Returns:** Complete HTML string met inline styles
-
-**Voorbeeld:**
-```python
-html = colored_json.to_html(data, style, title="My JSON", background_color="#282a36")
-with open("output.html", "w", encoding="utf-8") as f:
-    f.write(html)
-```
-
-### `colored_json.to_markdown(obj, style=None, title="Colored JSON", language="json")`
-
-Genereert Markdown met een code block (zonder kleuren, standaard Markdown). Ondersteunt zowel Python objecten als JSON strings (auto-detect).
-
-**Parameters:**
-- `obj`: Python dict, list, JSON string, of ander object om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-- `title`: Titel voor de Markdown sectie
-- `language`: Code block language identifier (standaard: "json")
-
-**Returns:** Markdown string met code block
-
-### `colored_json.to_markdown_from_json(json_str, style=None, title="Colored JSON", language="json")`
-
-Expliciete functie voor JSON string input naar Markdown. Geoptimaliseerd met simdjson en GIL release.
-
-**Parameters:**
-- `json_str`: JSON string om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-- `title`: Titel voor de Markdown sectie
-- `language`: Code block language identifier (standaard: "json")
-
-**Returns:** Markdown string met code block
-
-### `colored_json.to_markdown_html(obj, style=None, title="Colored JSON", background_color="#1e1e1e", font_family="Consolas, 'Courier New', monospace")`
-
-Genereert Markdown met HTML code block voor gekleurde JSON (werkt in Markdown renderers die HTML ondersteunen). Ondersteunt zowel Python objecten als JSON strings (auto-detect).
-
-**Parameters:**
-- `obj`: Python dict, list, JSON string, of ander object om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-- `title`: Titel voor de Markdown sectie
-- `background_color`: Achtergrondkleur (CSS kleur string)
-- `font_family`: Font familie voor de JSON weergave
-
-**Returns:** Markdown string met HTML code block
-
-### `colored_json.to_markdown_html_from_json(json_str, style=None, title="Colored JSON", background_color="#1e1e1e", font_family="Consolas, 'Courier New', monospace")`
-
-Expliciete functie voor JSON string input naar Markdown met HTML. Geoptimaliseerd met simdjson en GIL release.
-
-**Parameters:**
-- `json_str`: JSON string om te formatteren
-- `style`: Optionele Style object (standaard: Style())
-- `title`: Titel voor de Markdown sectie
-- `background_color`: Achtergrondkleur (CSS kleur string)
-- `font_family`: Font familie voor de JSON weergave
-
-**Returns:** Markdown string met HTML code block
-
-**Voorbeeld:**
-```python
-markdown = colored_json.to_markdown_html(data, style, title="My JSON", background_color="#282a36")
-with open("output.md", "w", encoding="utf-8") as f:
-    f.write(markdown)
-```
-
-### `Style` Class
-
-Stijl configuratie voor kleuring en formatting.
-
-**Attributen:**
-- `key_color`: Color voor dictionary keys
-- `string_color`: Color voor strings
-- `number_color`: Color voor nummers
-- `bool_color`: Color voor booleans
-- `null_color`: Color voor null waarden
-- `brace_color`: Color voor accolades `{}`
-- `bracket_color`: Color voor brackets `[]`
-- `colon_color`: Color voor dubbele punten `:`
-- `comma_color`: Color voor komma's `,`
-- `key_quote_color`: Color voor aanhalingstekens rond keys (standaard: zelfde als key_color)
-- `string_quote_color`: Color voor aanhalingstekens rond strings (standaard: zelfde als string_color)
-- `color_mode`: ColorMode (AUTO, ANSI16, ANSI256, TRUECOLOR, DISABLED)
-- `compact`: Boolean voor compact mode (geen indentatie)
-- `indent_size`: Aantal spaties per indent niveau
-
-**Methodes:**
-- `Style.get_preset(name)`: Laad een preset thema
-- `Style.list_presets()`: Lijst van beschikbare presets
-- `Style.set_key_color(key, color)`: Stel individuele kleur in voor een specifieke key
-- `Style.set_value_color(path, color)`: Stel individuele kleur in voor een value op basis van pad (bijv. "user.name")
-
-### `Color` Class
-
-RGB kleur met optionele styling.
-
-**Attributen:**
-- `r`, `g`, `b`: RGB waarden (0-255)
-- `bold`: Boolean voor vetgedrukt
-- `italic`: Boolean voor cursief
-- `underline`: Boolean voor onderstreept
-
-**Methodes:**
-- `Color.from_rgb(r, g, b)`: Maak Color van RGB waarden
-- `to_ansi(mode)`: Converteer naar ANSI escape code
-
-### `ColorMode` Enum
-
-Kleur modus opties:
-- `AUTO`: Automatische detectie
-- `ANSI16`: 16 kleuren mode
-- `ANSI256`: 256 kleuren mode
-- `TRUECOLOR`: 24-bit truecolor
-- `DISABLED`: Geen kleuren
-
-### Ingebouwde Kleuren
-
-Beschikbaar via `colored_json.colors`:
-- `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`
-- `bright_black`, `bright_red`, `bright_green`, `bright_yellow`, `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`
-
-## Presets
-
-### Beschikbare Presets
-
-1. **default/dracula**: Moderne donkere theme met felle kleuren
-2. **solarized**: Solarized color scheme
-3. **monokai**: Monokai editor theme
-4. **github**: GitHub stijl kleuren
-5. **minimal**: Subtiele grijstinten
-6. **neon**: Felle neon kleuren met bold styling
-
-### Preset gebruiken
-
-```python
-# Lijst alle presets
-presets = colored_json.Style.list_presets()
-print(presets)
-
-# Laad een preset
-style = colored_json.Style.get_preset("monokai")
-colored_json.print(data, style)
-```
-
-## Voorbeelden
-
-### Basis voorbeeld
+### Value-Dependent Styling
 
 ```python
 import colored_json
 
-data = {
-    "user": {
-        "name": "Alice",
-        "age": 30,
-        "scores": [95, 87, 92]
-    }
-}
-
+# Boolean kleuring is standaard ingebouwd in alle thema's:
+# true = groen, false = rood
+data = {"enabled": True, "debug": False, "count": 42}
 colored_json.print(data)
+
+# Custom styling rules
+style = colored_json.Style.get_preset("default")
+# Voeg custom matchers toe via de StyleRule API
 ```
 
-### Custom styling
+### Export Formaten
+
+```python
+import colored_json
+
+data = {"user": {"name": "Alice", "age": 30}}
+style = colored_json.Style.get_preset("dracula")
+
+# HTML
+html = colored_json.to_html(data, style, title="My JSON", background_color="#282a36")
+
+# Markdown
+md = colored_json.to_markdown(data, style, title="JSON Data")
+
+# Markdown met HTML kleuren
+md_html = colored_json.to_markdown_html(data, style, background_color="#282a36")
+```
+
+### Custom Kleuren
 
 ```python
 import colored_json
@@ -421,359 +246,109 @@ style.key_color = colored_json.Color(255, 100, 0)
 style.key_color.bold = True
 style.string_color = colored_json.colors.bright_green
 style.number_color = colored_json.colors.bright_yellow
-style.compact = False
 style.indent_size = 4
 
-data = {"name": "Test", "value": 42}
-colored_json.print(data, style)
-```
-
-### Individuele kleuren per key/veld
-
-```python
-import colored_json
-
-data = {
-    "user": {"name": "Alice", "age": 30},
-    "status": "active"
-}
-
-style = colored_json.Style()
-
-# Individuele key kleuren
-style.set_key_color("user", colored_json.Color(255, 0, 0))  # Rode "user" key
-style.set_key_color("name", colored_json.Color(0, 255, 0))  # Groene "name" keys
-style.set_key_color("status", colored_json.colors.bright_cyan)  # Cyaan "status" key
-
-# Individuele value kleuren (op basis van pad)
-style.set_value_color("user.name", colored_json.Color(255, 20, 147))  # Dieproze voor user.name waarde
-style.set_value_color("user.age", colored_json.Color(0, 191, 255))  # Diepblauw voor user.age waarde
-style.set_value_color("status", colored_json.colors.bright_green)  # Groen voor status waarde
-
-colored_json.print(data, style)
-```
-
-**Pad notatie:**
-- Eenvoudige keys: `"user"`, `"name"`, `"status"`
-- Geneste keys: `"user.name"`, `"user.age"`
-- Array items: `"products[0].name"`, `"products[1].price"`
-
-### Quote kleuren styling
-
-```python
-import colored_json
-
-data = {"name": "Alice", "status": "active"}
-
-style = colored_json.Style.get_preset("default")
-
-# Custom quote kleuren
-style.key_quote_color = colored_json.Color(255, 255, 0)  # Geel voor key quotes
-style.string_quote_color = colored_json.Color(0, 255, 255)  # Cyaan voor string quotes
-
-# Of subtiele grijs quotes
-style.key_quote_color = colored_json.Color(128, 128, 128)
-style.string_quote_color = colored_json.Color(128, 128, 128)
-
-colored_json.print(data, style)
-```
-
-**Preset quote kleuren:**
-- **default/dracula**: Quotes hebben dezelfde kleur als content
-- **solarized**: Subtiele grijze quotes voor betere leesbaarheid
-- **monokai**: Witte quotes voor contrast
-- **github**: Donkere quotes
-- **minimal**: Subtiele grijze quotes
-- **neon**: Witte quotes voor contrast
-
-### HTML export
-
-```python
-import colored_json
-
-data = {
-    "user": {"name": "Alice", "age": 30},
-    "status": "active"
-}
-
-# Standaard HTML export
-style = colored_json.Style.get_preset("dracula")
-html = colored_json.to_html(data, style, title="My JSON", background_color="#282a36")
-with open("output.html", "w", encoding="utf-8") as f:
-    f.write(html)
-
-# Met custom styling
+# Per-key kleuring
 style.set_key_color("user", colored_json.Color(255, 0, 0))
-html = colored_json.to_html(data, style, background_color="#1e1e1e")
+style.set_value_color("user.name", colored_json.Color(255, 20, 147))
+
+colored_json.print({"user": {"name": "Alice"}}, style)
 ```
 
-### Markdown export
+### Beschikbare Thema's
 
-```python
-import colored_json
+| Thema | Beschrijving |
+|-------|-------------|
+| `default` | Moderne donkere theme |
+| `dracula` | Dracula color scheme |
+| `solarized` | Solarized kleuren |
+| `monokai` | Monokai editor theme |
+| `github` | GitHub stijl |
+| `minimal` | Subtiele grijstinten |
+| `neon` | Felle neon kleuren |
+| `ocean` | Oceaan blauw/groen tinten |
+| `forest` | Bos groen/bruin tinten |
+| `cyberpunk` | Cyberpunk neon |
+| `sunset` | Warme zonsondergang |
+| `high-contrast` | Hoog contrast |
+| `nord` | Nord color scheme |
+| `gruvbox` | Gruvbox retro |
+| `one-dark` | Atom One Dark |
+| `catppuccin` | Catppuccin pastels |
+| `ice` | Koele ijs tinten |
+| `coffee` | Warme koffie tinten |
+| `white` | Lichte achtergrond |
+| `debug` | Highlights errors/warnings |
+| `depth-aware` | Kleuren op basis van nesting |
+| `data-analysis` | Array pattern highlighting |
 
-data = {
-    "user": {"name": "Alice", "age": 30},
-    "status": "active"
-}
+---
 
-# Markdown met code block (zonder kleuren)
-style = colored_json.Style.get_preset("default")
-markdown = colored_json.to_markdown(data, style, title="Example JSON")
-with open("output.md", "w", encoding="utf-8") as f:
-    f.write(markdown)
+## Build & Development
 
-# Markdown met HTML code block (gekleurd, werkt in GitHub, GitLab, etc.)
-markdown = colored_json.to_markdown_html(
-    data, style, 
-    title="Colored JSON Example",
-    background_color="#282a36"
-)
-with open("colored_output.md", "w", encoding="utf-8") as f:
-    f.write(markdown)
+### Project Structuur
+
+```
+mijn-json-kleurkrijt/
+├── src/                    # Core C++ library
+│   ├── printer.hpp         # Console printer (ANSI)
+│   ├── html_printer.hpp    # HTML export
+│   ├── markdown_printer.hpp # Markdown export
+│   ├── style.hpp           # Style configuratie
+│   ├── color.hpp           # Color class en ANSI conversie
+│   ├── themes.hpp          # 21+ ingebouwde thema's
+│   ├── matchers.hpp/cpp    # Value matching engine
+│   ├── style_context.hpp   # Rule-based styling context
+│   └── bindings.cpp        # Python pybind11 bindings
+├── wjq/                    # wjq CLI tool
+│   ├── src/
+│   │   ├── main.cpp        # CLI entry point
+│   │   ├── query_engine.hpp # Query AST types
+│   │   ├── query_parser.cpp # jq expression parser
+│   │   ├── query_executor.cpp # Query execution engine
+│   │   ├── jsonpath.hpp     # JSONPath types
+│   │   ├── jsonpath_executor.cpp # JSONPath + unified query API
+│   │   └── streaming_parser.hpp # NDJSON streaming
+│   └── tests/              # Catch2 unit tests
+│       ├── test_query.cpp   # Query engine tests (91 cases)
+│       ├── test_printer.cpp # Printer tests
+│       ├── test_style.cpp   # Style/theme tests
+│       └── test_streaming.cpp # Streaming parser tests
+├── examples/               # Python voorbeelden
+├── CMakeLists.txt          # Root CMake
+└── setup.py                # Python package setup
 ```
 
-### JSON string input (razendsnel)
-
-```python
-import colored_json
-import json
-
-# JSON string input (auto-detect)
-json_str = '{"name": "Alice", "age": 30, "active": true}'
-colored_json.print(json_str)  # Automatisch geoptimaliseerd
-
-# Expliciete functie (maximale performance)
-style = colored_json.Style.get_preset("dracula")
-result = colored_json.format_from_json(json_str, style)
-print(result)
-
-# HTML export met JSON string
-html = colored_json.to_html_from_json(json_str, style, title="My JSON")
-with open("output.html", "w", encoding="utf-8") as f:
-    f.write(html)
-
-# Van Python dict naar JSON string voor snellere verwerking
-data = {"name": "Alice", "age": 30}
-json_str = json.dumps(data)
-colored_json.format_from_json(json_str)  # Sneller dan format(data)
-```
-
-### Performance benchmark
-
-```python
-import time
-import colored_json
-import json
-
-# Grote dataset
-large_data = {"items": [{"id": i, "data": f"item_{i}"} for i in range(10000)]}
-json_str = json.dumps(large_data)
-
-style = colored_json.Style()
-style.compact = True
-
-# Python object input
-start = time.time()
-result1 = colored_json.format(large_data, style)
-duration1 = time.time() - start
-
-# JSON string input
-start = time.time()
-result2 = colored_json.format_from_json(json_str, style)
-duration2 = time.time() - start
-
-print(f"Python object: {duration1*1000:.2f} ms")
-print(f"JSON string: {duration2*1000:.2f} ms")
-print(f"Speedup: {duration1/duration2:.2f}x")
-```
-
-Typische performance:
-- **Python objecten**: ~5-10ms voor 10.000 items
-- **JSON strings**: ~2-5ms voor 10.000 items (2-5x sneller met simdjson en GIL release)
-
-## Development Setup
-
-### IDE Configuration (VS Code)
-
-Voor optimale IntelliSense en code completion in VS Code:
-
-#### Vereisten
-- **C/C++ Extension** (Microsoft)
-- **clangd Extension** (LLVM) - Aanbevolen voor betere IntelliSense
-
-#### Configuratie
-
-Het project bevat `.clangd` configuratiebestanden die automatisch de juiste include paths instellen:
-
-```yaml
-# .clangd (root)
-CompileFlags:
-  Add:
-    - "-IC:/CPP/mijn-json-kleurkrijt/wjq/libs/simdjson"
-    - "-IC:/CPP/mijn-json-kleurkrijt/wjq/src"
-    - "-IC:/CPP/mijn-json-kleurkrijt/src"
-    - "-IC:/CPP/mijn-json-kleurkrijt/.venv/Lib/site-packages/pybind11/include"
-    - "-IC:/Users/administrator/AppData/Roaming/uv/python/cpython-3.12.9-windows-x86_64-none/Include"
-    - "-std=c++17"
-    - "-D_WIN32"
-```
-
-#### VS Code Settings
-
-Het project bevat `.vscode/c_cpp_properties.json` met de correcte configuratie voor:
-- Include paths voor simdjson, pybind11, en Python headers
-- C++17 standaard
-- MSVC compiler path
-- Browse paths voor symbol resolution
-
-#### IntelliSense Troubleshooting
-
-Als je IntelliSense errors ziet:
-
-1. **Restart clangd server**:
-   - `Ctrl+Shift+P` → "clangd: Restart language server"
-
-2. **Rebuild IntelliSense database**:
-   - `Ctrl+Shift+P` → "C/C++: Reset IntelliSense Database"
-
-3. **Check include paths**:
-   - Zorg dat simdjson submodule is geïnitialiseerd: `git submodule update --init --recursive`
-   - Controleer of Python virtual environment actief is
-
-### CMake Configuration
-
-Het project gebruikt moderne CMake met `FindPython`:
-
-```cmake
-# Use modern FindPython module
-set(PYBIND11_FINDPYTHON ON)
-find_package(pybind11 REQUIRED)
-```
-
-Dit voorkomt deprecation warnings en zorgt voor betere compatibiliteit met nieuwere CMake versies.
-
-## Build Instructies
-
-### Windows (MSVC)
+### Bouwen
 
 ```bash
-uv pip install -e .
+# Volledige build (Python module + wjq tool)
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Release
+
+# Alleen wjq tool
+cmake --build build --config Release --target wjq
 ```
 
-### Linux/Mac (GCC/Clang)
+### Tests
 
 ```bash
-uv pip install -e .
-```
+# C++ unit tests (wjq)
+build\wjq\tests\Release\wjq_tests.exe
 
-Of met CMake:
-
-```bash
-mkdir build && cd build
-cmake ..
-make -j4
-```
-
-## Tests
-
-Run de unit tests:
-
-```bash
-pytest tests/test_colored_json.py -v
-```
-
-Of direct:
-
-```bash
-python tests/test_colored_json.py
-```
-
-## Demo
-
-Run de demonstratie:
-
-```bash
-python examples/demo.py
-```
-
-## Type Hints
-
-De module bevat volledige type stubs (`.pyi`) voor sterke typing in Python. Dit betekent:
-
-- **IDE ondersteuning**: Autocomplete en type checking in VS Code, PyCharm, etc.
-- **Type checkers**: Werkt met mypy, pyright, en andere type checkers
-- **Betere code kwaliteit**: Type hints helpen bij het voorkomen van bugs
-
-### Voorbeeld met type hints
-
-```python
-from typing import Dict, Any
-import colored_json
-
-def process_json(data: Dict[str, Any]) -> str:
-    """Functie met type hints."""
-    style = colored_json.Style.get_preset("dracula")
-    return colored_json.format(data, style)
-
-# Type checker weet nu dat result een str is
-result: str = process_json({"name": "Alice"})
-```
-
-De type stubs worden automatisch meegenomen bij installatie en zijn beschikbaar voor alle IDE's en type checkers.
-
-## JSON String Input Performance
-
-De module ondersteunt nu ook JSON strings als input, wat significant sneller is dan Python objecten:
-
-### Dual Mode
-Alle functies (`format()`, `to_html()`, `to_markdown()`, etc.) ondersteunen automatische detectie:
-- **Python objecten** (dict, list): Gebruikt Python API calls (huidige implementatie)
-- **JSON strings**: Gebruikt simdjson voor razendsnelle parsing zonder Python API overhead
-
-### Expliciete Functies
-Voor maximale performance met JSON strings, gebruik de expliciete functies:
-- `format_from_json(json_str, style)`
-- `to_html_from_json(json_str, style, ...)`
-- `to_markdown_from_json(json_str, style, ...)`
-- `to_markdown_html_from_json(json_str, style, ...)`
-
-### Performance Voordelen
-- **2-5x sneller** dan Python object input voor kleine tot middelgrote datasets
-- **5-10x sneller** voor grote datasets (>1000 items)
-- **GIL release**: GIL wordt vrijgegeven tijdens JSON processing voor betere multi-threaded performance
-- **simdjson**: SIMD-optimized JSON parsing (gigabytes per seconde)
-
-### Voorbeeld
-
-```python
-import colored_json
-
-# JSON string input (auto-detect)
-json_str = '{"name": "Alice", "age": 30}'
-colored_json.format(json_str)  # Automatisch geoptimaliseerd
-
-# Expliciete functie (maximale performance)
-result = colored_json.format_from_json(json_str)
+# Python tests
+uv run pytest tests/ -v
 ```
 
 ## Technische Details
 
 - **C++ Standard**: C++17
-- **Dependencies**: 
-  - pybind11 >= 2.10.0
-  - simdjson (via git submodule, automatisch gedownload)
+- **JSON Parser**: simdjson (SIMD-optimized, GB/s throughput)
+- **Test Framework**: Catch2 v3
+- **Python Binding**: pybind11
 - **Platforms**: Windows, Linux, macOS
 - **Compilers**: MSVC, GCC, Clang
-- **Type Hints**: Volledige `.pyi` stub files voor Python 3.7+
-- **JSON Parsing**: simdjson (SIMD-optimized, zeer snel)
-- **GIL Management**: GIL wordt vrijgegeven tijdens JSON string processing
 
 ## Licentie
 
 [Voeg licentie toe]
-
-## Auteur
-
-[Voeg auteur informatie toe]
-
