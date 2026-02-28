@@ -1,4 +1,6 @@
-#pragma once
+#ifdef _WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <cstdint>
 #include <cstdlib>
 #include <sstream>
@@ -24,12 +26,14 @@ struct Color {
   Color(uint8_t r_, uint8_t g_, uint8_t b_) : r(r_), g(g_), b(b_) {}
 
   std::string toAnsi(ColorMode mode = ColorMode::Auto) const;
-  static Color fromRgb(uint8_t r, uint8_t g, uint8_t b) { return {r, g, b}; }
+  static Color fromRgb(uint8_t red, uint8_t green, uint8_t blue) {
+    return {red, green, blue};
+  }
 
   // Fluent interface for styling
-  Color with_bold(bool b = true) const {
+  Color with_bold(bool bold_val = true) const {
     Color c = *this;
-    c.bold = b;
+    c.bold = bold_val;
     return c;
   }
 
@@ -84,7 +88,9 @@ struct Color {
   bool is_dark() const { return (r + g + b) < 384; } // < 1.5 * 255
 
   // Get contrasting color (black or white)
-  Color contrast() const { return is_dark() ? Color{255, 255, 255} : Color{0, 0, 0}; }
+  Color contrast() const {
+    return is_dark() ? Color{255, 255, 255} : Color{0, 0, 0};
+  }
 
   bool operator==(const Color &other) const {
     return r == other.r && g == other.g && b == other.b && bold == other.bold &&

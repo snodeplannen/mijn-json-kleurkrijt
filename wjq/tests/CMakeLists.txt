@@ -28,7 +28,10 @@ add_executable(wjq_tests
     ../src/jsonpath_executor.cpp
 )
 
-target_include_directories(wjq_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../../src)
+target_include_directories(wjq_tests PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+)
 target_link_libraries(wjq_tests PRIVATE Catch2::Catch2WithMain simdjson)
 
 if(WIN32)

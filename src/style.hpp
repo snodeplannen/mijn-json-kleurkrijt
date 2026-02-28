@@ -372,3 +372,5 @@ struct Style {
 };
 
 } // namespace colored_json
+
+#include "themes.hpp"

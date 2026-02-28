@@ -196,7 +196,6 @@ bool QueryValue::operator<(const QueryValue &other) const {
           const auto &other_obj = std::get<ObjectType>(other.data_);
           return val.size() < other_obj.size();
         }
-        return false;
       },
       data_);
 }
