@@ -9,7 +9,9 @@ namespace colored_json {
 // Helper: convert string to lowercase
 static std::string to_lower(const std::string &s) {
   std::string result = s;
-  std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+  std::transform(
+      result.begin(), result.end(), result.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   return result;
 }
 
@@ -27,7 +29,7 @@ static bool try_parse_double(const std::string &s, double &out) {
 
 // KeywordMatcher implementation
 MatchResult KeywordMatcher::match(const std::string &value,
-                                   const StyleContext &ctx) const {
+                                  const StyleContext &ctx) const {
   (void)ctx; // Unused for now
 
   std::string check_value = case_sensitive ? value : to_lower(value);
@@ -59,11 +61,10 @@ std::string KeywordMatcher::describe() const {
 
 // RegexMatcher implementation
 RegexMatcher::RegexMatcher(const std::string &pattern_str)
-    : pattern(pattern_str, std::regex::ECMAScript),
-      pattern_str(pattern_str) {}
+    : pattern(pattern_str, std::regex::ECMAScript), pattern_str(pattern_str) {}
 
 MatchResult RegexMatcher::match(const std::string &value,
-                                 const StyleContext &ctx) const {
+                                const StyleContext &ctx) const {
   (void)ctx;
 
   std::smatch match;
@@ -79,7 +80,7 @@ std::string RegexMatcher::describe() const {
 
 // RangeMatcher implementation
 MatchResult RangeMatcher::match(const std::string &value,
-                                 const StyleContext &ctx) const {
+                                const StyleContext &ctx) const {
   (void)ctx;
 
   double num;
@@ -114,7 +115,7 @@ std::string RangeMatcher::describe() const {
 
 // CompareMatcher implementation
 MatchResult CompareMatcher::match(const std::string &value,
-                                   const StyleContext &ctx) const {
+                                  const StyleContext &ctx) const {
   (void)ctx;
 
   double num;
@@ -147,7 +148,8 @@ MatchResult CompareMatcher::match(const std::string &value,
   if (result) {
     // Calculate strength based on distance from comparison value
     double diff = std::abs(num - compare_val);
-    double strength = std::max(0.5, 1.0 - (diff / (std::abs(compare_val) + 1.0)));
+    double strength =
+        std::max(0.5, 1.0 - (diff / (std::abs(compare_val) + 1.0)));
     return MatchResult(true, strength);
   }
   return MatchResult(false);
@@ -180,7 +182,8 @@ std::string CompareMatcher::describe() const {
 }
 
 // PathMatcher implementation
-PathMatcher::PathMatcher(std::string path_pattern) : pattern(std::move(path_pattern)) {
+PathMatcher::PathMatcher(std::string path_pattern)
+    : pattern(std::move(path_pattern)) {
   // Convert glob-like pattern to regex
   // * matches any single key
   // ** matches any path
@@ -212,7 +215,7 @@ PathMatcher::PathMatcher(std::string path_pattern) : pattern(std::move(path_patt
 }
 
 MatchResult PathMatcher::match(const std::string &value,
-                                const StyleContext &ctx) const {
+                               const StyleContext &ctx) const {
   (void)ctx;
 
   std::smatch match;
@@ -226,7 +229,7 @@ std::string PathMatcher::describe() const { return "path(" + pattern + ")"; }
 
 // AnyMatcher implementation
 MatchResult AnyMatcher::match(const std::string &value,
-                               const StyleContext &ctx) const {
+                              const StyleContext &ctx) const {
   for (const auto &m : matchers) {
     auto result = m->match(value, ctx);
     if (result.matched) {
@@ -258,7 +261,7 @@ std::unique_ptr<Matcher> AnyMatcher::clone() const {
 
 // AllMatcher implementation
 MatchResult AllMatcher::match(const std::string &value,
-                               const StyleContext &ctx) const {
+                              const StyleContext &ctx) const {
   double min_strength = 1.0;
   for (const auto &m : matchers) {
     auto result = m->match(value, ctx);

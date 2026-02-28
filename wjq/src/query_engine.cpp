@@ -167,7 +167,6 @@ bool QueryValue::operator==(const QueryValue &other) const {
           }
           return true;
         }
-        return false;
       },
       data_);
 }

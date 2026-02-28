@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-02-28
+
+### Fixed
+- **Compiler Warnings**: Fixed `tolower` conversion warning in `matchers.cpp`.
+- **Compiler Warnings**: Removed unreachable code in `query_engine.cpp`.
+- **Third-party Noise**: Suppressed MSVC warnings for `simdjson.h` in headers.
+
 ## [0.8.3] - 2026-02-28
 
 ### Fixed

@@ -3,7 +3,14 @@
 #include "json_parser.hpp"
 #include "style.hpp"
 #include <iomanip>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4100 4244)
+#endif
 #include <simdjson.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #include <sstream>
 
 namespace colored_json {
