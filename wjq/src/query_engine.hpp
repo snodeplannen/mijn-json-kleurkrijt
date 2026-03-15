@@ -152,6 +152,7 @@ enum class QueryOpType {
   Test,                // test("regex")
   Match,               // match("regex")
   Sub,                 // sub("regex", "replacement")
+  Compact,             // compact - remove keys with empty/null values
   Optional,            // expr?
   TryCatch,            // try expr catch expr
   Variable,            // $var
@@ -315,6 +316,7 @@ private:
   QueryValue evaluateContains(const QueryValue &input,
                               const QueryValue &needle);
   QueryValue evaluateHas(const QueryValue &input, const std::string &key);
+  QueryValue evaluateCompact(const QueryValue &input);
 
   // Arithmetic and comparison
   QueryValue evaluateBinaryOp(QueryOpType type, const QueryValue &left,

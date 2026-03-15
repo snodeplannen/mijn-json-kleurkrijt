@@ -470,6 +470,8 @@ private:
           funcType = QueryOpType::Unique;
         else if (ident == "reverse")
           funcType = QueryOpType::Reverse;
+        else if (ident == "compact")
+          funcType = QueryOpType::Compact;
         else if (ident == "contains")
           funcType = QueryOpType::Contains;
         else if (ident == "has")
@@ -528,6 +530,8 @@ private:
       return QueryOp::function(QueryOpType::Unique, {});
     if (ident == "reverse")
       return QueryOp::function(QueryOpType::Reverse, {});
+    if (ident == "compact")
+      return QueryOp::function(QueryOpType::Compact, {});
 
     return QueryOp::make_property(ident);
   }

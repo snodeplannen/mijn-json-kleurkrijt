@@ -27,7 +27,7 @@ Een razendsnelle C++ bibliotheek en CLI tool voor gekleurde JSON weergave. Bevat
   - Variable bindings: `.name as $n | {user: $n}`
   - Arithmetic: `. + 1`, `. * 2`, `. / 3`
   - Boolean logic: `and`, `or`, `not`
-  - Functies: `keys`, `values`, `length`, `sort`, `unique`, `reverse`, `has`, `contains`
+  - Functies: `keys`, `values`, `length`, `sort`, `unique`, `reverse`, `compact`, `has`, `contains`
 - **JSONPath** queries: `$.store.book[0]`, `$..author`, `$..book[?(@.price<10)]`
 - **Streaming parser** met `simdjson::iterate_many` voor grote bestanden en NDJSON
 - **22+ kleurthema's** met boolean true/false kleuring
@@ -119,6 +119,11 @@ wjq '.price | . * 1.21' data.json
 
 # Try/catch
 wjq 'try .missing_field catch "not found"' data.json
+
+# Verwijder keys met lege strings of null waarden
+wjq 'compact()' data.json
+echo '{"a": 1, "b": "", "c": null}' | wjq 'compact()'
+# Output: {"a": 1}
 ```
 
 ### JSONPath Queries
@@ -152,6 +157,7 @@ Data transformatie:
   --hide-sensitive       Verberg wachtwoorden, tokens, secrets
   --truncate N           Strings afkappen op N karakters
   --format-numbers       Duizendtallen-separator toevoegen
+  --clean                Verwijder keys met lege strings of null waarden
 
 Informatie:
   --themes               Toon beschikbare thema's
@@ -181,6 +187,10 @@ wjq -S large-file.json
 
 # Realtime streaming uit een pipe
 trufflehog filesystem /pad/naar/files --json | wjq
+
+# Opschonen van JSON (verwijder lege/null waarden)
+echo '{"name": "test", "empty": "", "null_val": null}' | wjq --clean
+# Output: {"name": "test"}
 ```
 
 ---

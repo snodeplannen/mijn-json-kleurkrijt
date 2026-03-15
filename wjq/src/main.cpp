@@ -49,6 +49,7 @@ struct CommandLineOptions {
   bool hide_sensitive = false; // Hide sensitive fields
   size_t truncate_strings = 0; // Truncate strings longer than this
   bool format_numbers = false; // Add thousand separators
+  bool clean = false;          // Remove keys with empty/null values
 
   bool raw_output = false; // -r Output raw strings
   bool slurp = false;      // -s Read stream of objects into array
@@ -89,6 +90,7 @@ void printUsage(const char *programName) {
   std::cerr
       << "  --truncate N           Truncate strings longer than N chars\n";
   std::cerr << "  --format-numbers       Add thousand separators to numbers\n";
+  std::cerr << "  --clean                Remove keys with empty/null values\n";
   std::cerr
       << "  --tee FILE             Output raw, uncolored input data to FILE\n";
   std::cerr << "  --themes               List all available themes\n";
@@ -110,6 +112,7 @@ void printUsage(const char *programName) {
   std::cerr << "  sort                   Sort array\n";
   std::cerr << "  reverse                Reverse array\n";
   std::cerr << "  unique                 Get unique values\n";
+  std::cerr << "  compact                Remove keys with empty/null values\n";
   std::cerr << "  map(expr)              Map expression over array\n";
   std::cerr << "  select(condition)      Filter array elements\n";
   std::cerr << "  .items | length        Pipe: get length of items\n";
@@ -135,7 +138,7 @@ void printUsage(const char *programName) {
 }
 
 void printVersion() {
-  std::cout << "wjq 2.0.0 - Windows JSON Query Tool\n";
+  std::cout << "wjq 2.1.0 - Windows JSON Query Tool\n";
   std::cout << "Enhanced with conditional styling, streaming, and callbacks\n";
 }
 
@@ -226,6 +229,8 @@ CommandLineOptions parseArguments(int argc, char *argv[]) {
       }
     } else if (arg == "--format-numbers") {
       opts.format_numbers = true;
+    } else if (arg == "--clean") {
+      opts.clean = true;
     } else if (arg == "--tee") {
       if (i + 1 < argc) {
         opts.tee_file = argv[++i];
@@ -448,6 +453,22 @@ std::string stripJsonQuotes(const std::string &s) {
   return s;
 }
 
+// Apply compact to remove empty/null values if requested
+std::string applyCleanIfNeeded(const std::string &json,
+                               const CommandLineOptions &opts) {
+  if (!opts.clean) {
+    return json;
+  }
+  // Apply compact() function
+  std::string clean_query = "compact()";
+  std::string result =
+      colored_json::JsonQuery::execute(json, clean_query, {});
+  if (!colored_json::JsonQuery::get_error().empty()) {
+    return json; // Return original on error
+  }
+  return result;
+}
+
 // Execute jq-style or JSONPath query filter
 int executeQueryFilter(const std::string &input, const CommandLineOptions &opts,
                        const colored_json::CallbackRegistry &) {
@@ -467,6 +488,7 @@ int executeQueryFilter(const std::string &input, const CommandLineOptions &opts,
       std::cerr << "JSONPath error: " << JsonQuery::get_error() << "\n";
       return 1;
     }
+    result = applyCleanIfNeeded(result, opts);
     if (opts.raw_output) {
       std::cout << stripJsonQuotes(result) << "\n";
     } else {
@@ -481,6 +503,8 @@ int executeQueryFilter(const std::string &input, const CommandLineOptions &opts,
     std::cerr << "Query error: " << JsonQuery::get_error() << "\n";
     return 1;
   }
+
+  result = applyCleanIfNeeded(result, opts);
 
   if (opts.raw_output) {
     std::cout << stripJsonQuotes(result) << "\n";
@@ -497,6 +521,11 @@ int processRegular(const std::string &input, const CommandLineOptions &opts,
 
   // If filter is not just ".", use query engine
   if (opts.filter != ".") {
+    return executeQueryFilter(input, opts, callbacks);
+  }
+
+  // If --clean is specified, use query engine with compact()
+  if (opts.clean) {
     return executeQueryFilter(input, opts, callbacks);
   }
 
@@ -578,9 +607,9 @@ int main(int argc, char *argv[]) {
 #endif
 
     // If reading from stdin and it's a pipe, default to streaming unless slurp
-    // is on
+    // is on, a filter is specified, or clean is enabled
     if ((opts.filename.empty() || opts.filename == "-") && is_stdin_pipe &&
-        !opts.slurp) {
+        !opts.slurp && opts.filter == "." && !opts.clean) {
       opts.streaming = true;
     }
 

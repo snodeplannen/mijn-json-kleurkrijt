@@ -123,6 +123,9 @@ QueryValue QueryEngine::executeOp(const QueryOp &op, const QueryValue &input) {
   case QueryOpType::Reverse:
     return evaluateReverse(input);
 
+  case QueryOpType::Compact:
+    return evaluateCompact(input);
+
   case QueryOpType::Contains:
     if (op.args.size() >= 1) {
       QueryValue needle = executeOp(*op.args[0], QueryValue::null());
@@ -524,6 +527,33 @@ QueryValue QueryEngine::evaluateHas(const QueryValue &input,
     }
   }
   return QueryValue(false);
+}
+
+QueryValue QueryEngine::evaluateCompact(const QueryValue &input) {
+  // Compact removes keys with empty string or null values recursively
+  if (input.isObject()) {
+    QueryValue::ObjectType result;
+    for (const auto &[key, val] : input.asObject()) {
+      // Skip empty strings and null values
+      if (val.isNull()) {
+        continue;
+      }
+      if (val.isString() && val.asString().empty()) {
+        continue;
+      }
+      // Recursively compact nested objects and arrays
+      result.push_back({key, evaluateCompact(val)});
+    }
+    return QueryValue::object(std::move(result));
+  } else if (input.isArray()) {
+    QueryValue::ArrayType result;
+    for (const auto &elem : input.asArray()) {
+      result.push_back(evaluateCompact(elem));
+    }
+    return QueryValue::array(std::move(result));
+  }
+  // Return primitive values as-is
+  return input;
 }
 
 QueryValue QueryEngine::evaluateBinaryOp(QueryOpType type,

@@ -20,7 +20,7 @@ ext_modules = [
         ],
         cxx_std=17,
         define_macros=[
-            ("VERSION_INFO", "1.0.0"),
+            ("VERSION_INFO", "0.10.0"),
         ],
         extra_compile_args=[
             "-O3", "-mtune=generic", "-ffast-math", "-DNDEBUG"
@@ -32,7 +32,7 @@ ext_modules = [
 
 setup(
     name="colored_json",
-    version="0.9.0",
+    version="0.10.0",
     description="Razendsnelle gekleurde JSON/dict printer",
     long_description="C++ module voor gekleurde weergave van Python dicts met preset thema's",
     ext_modules=ext_modules,
